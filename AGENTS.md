@@ -78,8 +78,11 @@
 
 ```bash
 python3 .harness/scripts/test_materialize_tasks.py
+python3 .harness/scripts/test_lint_harness.py
+python3 .harness/scripts/test_select_next_task.py
 python3 .harness/scripts/test_state_write.py
 python3 .harness/scripts/test_tasks_schema.py
+python3 .harness/scripts/test_update_task.py
 python3 .harness/scripts/test_validate_state.py
 ```
 

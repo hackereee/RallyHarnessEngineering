@@ -39,10 +39,11 @@ repo/
 │     ├─ update-task.py        # 唯一写 tasks.json task 状态的网关
 │     ├─ select-next-task.py   # 只读选择下一个可执行 task，并输出 state patch 建议
 │     ├─ state-write.py        # 唯一写 workflow-state.json 的网关
+│     ├─ lint-harness.py       # 只读巡检目录结构与 Harness 全局不变量
 │     └─ test_*.py             # Harness 契约、脚本与模板的回归测试
 │
 │     # 规划中的 lifecycle 工具：
-│     # harness / check-env.py / session-start.py / archive-plan.py / lint-harness.py
+│     # harness / check-env.py / session-start.py / archive-plan.py
 │
 ├─ work/                        # 运行态：随业务滚动、可被清理的数据
 │  ├─ workflow-state.json       # 当前工作流运行态（顶部 $schema 指向 .harness/schemas/）
@@ -117,6 +118,7 @@ repo/
 - **`update-task.py`**：`tasks.json` 的 task 状态写入网关，负责更新 task `status`、`ownerRole`、`currentStep`、`nextAction`、`verification`、`blockedReason`，并校验 schema 与 `done` 前置条件。
 - **`select-next-task.py`**：只读选择器。读取并校验 plan 的 `tasks.json`，在没有 active task 时选出第一个依赖均已 `done` 的 `idle` task；若全部 task 已 `done`，输出进入 `archiving` 的 state patch 建议。它不写 `tasks.json`，不写 `workflow-state.json`。
 - **`state-write.py`**：`workflow-state.json` 的**唯一写入网关**。接收 JSON Patch（或显式字段），依次执行"读当前 state → 应用 patch → 校验 phase 转换路径 → 调 `validate-state` → 临时文件 + rename 原子落盘 → 追加变更日志"。其他脚本一律只输出 patch，不直接写 state。
+- **`lint-harness.py`**：只读巡检目录结构与全局不变量。覆盖 `work/` 初始态、单 active plan、active plan package 完整性、`activePlanRef` 与目录一致性、active task 数量，以及非网关脚本直接写 `workflow-state.json`。
 - **`test_*.py`**：Harness 契约、脚本与模板的回归测试。
 
 规划中的 lifecycle 工具：
@@ -137,9 +139,9 @@ repo/
 
 ## 关键不变量
 
-1. **单活跃 plan**：`work/plans/active/` 任意时刻至多一个目录；当前由规则与 Agent 复查约束，后续由 `lint-harness.py` 强制。
+1. **单活跃 plan**：`work/plans/active/` 任意时刻至多一个目录；当前由规则与 `lint-harness.py` 强制。
 2. **schema-first**：凡能用 schema 表达的约束一律落到 `.harness/schemas/`，`.harness/rules/` 不得重复。
 3. **路径对称**：active 与 archived 的 plan 路径只差一段（`active` ↔ `archived`），方便脚本机械迁移。
 4. **入口唯一**：最终脚本对外统一走 `.harness/scripts/harness <subcmd>`；当前已落地脚本仍可直接运行。
 5. **运行态可清**：`rm -rf work/` 只回到初始态，不损坏 Harness 自身。
-6. **单写者**：`workflow-state.json` 仅由 `state-write.py` 写入；其他脚本若需修改 state，必须输出 patch 并经此入口落盘。后续 `lint-harness.py` 应扫描源码中对该文件的直接写操作（如 `open(..., 'w')`、`json.dump` 指向该路径）并视为违规。
+6. **单写者**：`workflow-state.json` 仅由 `state-write.py` 写入；其他脚本若需修改 state，必须输出 patch 并经此入口落盘。`lint-harness.py` 会扫描生产脚本中对该文件的直接写操作（如 `open(..., 'w')`、`Path.write_text(...)` 指向该路径）并视为违规。

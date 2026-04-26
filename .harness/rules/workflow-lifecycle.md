@@ -117,10 +117,11 @@ planning ──► implementing ──► testing ──► reviewing ──► 
 - `select-next-task.py`：只读选择器。按 `dependsOn` 与 `status` 选出下一个可执行 `idle` task；若 plan 内所有 task 均为 `done`，输出进入 `archiving` 的 state patch 建议。它只输出给 `update-task.py` / `state-write.py` 使用的结构化建议，不直接写 `tasks.json` 或 `workflow-state.json`。
 - `state-write.py`：`workflow-state.json` 唯一写入网关。
 - `validate-state.py`：校验 workflow state 与 active task 的跨文件一致性。
+- `lint-harness.py`：只读巡检目录结构与全局不变量。适合作为 session start、`planning → implementing`、active task 切换、归档前后的 preflight / postflight gate。
 
-为使 lifecycle 自动化继续闭环，还需要补齐以下 lifecycle 工具；在这些工具落地前，不应声称归档和目录巡检已具备完整脚本网关。
+为使 lifecycle 自动化继续闭环，还需要补齐以下 lifecycle 工具；在这些工具落地前，不应声称归档已具备完整脚本网关。
 
-- `archive-plan.py` / `lint-harness.py`：归档与目录不变量工具；归档阶段使用，不参与普通 task gate 流转。
+- `archive-plan.py`：归档工具；归档阶段使用，不参与普通 task gate 流转。
 
 标准阶段流转顺序如下。凡涉及 `workflow-state.json` 的修改，最后都必须经 `state-write.py`；凡涉及 `tasks.json` 的修改，都必须经 `update-task.py`。
 
@@ -217,5 +218,5 @@ L0/L1 工作流完成的判定：`nextAction` 已为空或被替换为下一个 
 | `currentPhase` 跳跃式转换 | `state-write.py` lifecycle 层 | 阻断；要求经合法路径 |
 | `currentPhase` 与 `workflow-state.ownerRole` 不匹配 | schema | 阻断；按 phase 修正 ownerRole |
 | L2/L3 active task 的 `ownerRole` 与 `workflow-state.ownerRole` 不一致 | `validate-state.py` 跨文件层 | 阻断；同步 workflow 与 task 责任角色 |
-| 双 active task | `select-next-task.py` + `state-write.py` + 后续 `lint-harness.py` | 选择器拒绝在已有 active task 时选择新 task；写入网关拒收不一致 state；目录/任务巡检由后续 lint 固化 |
-| `plans/active/` 残留目录但 `activePlanRef = null` | Agent 复查 + 后续 `lint-harness.py` | 阻断；要求归档或恢复引用 |
+| 双 active task | `select-next-task.py` + `state-write.py` + `lint-harness.py` | 选择器拒绝在已有 active task 时选择新 task；写入网关拒收不一致 state；目录/任务巡检由 lint 固化 |
+| `plans/active/` 残留目录但 `activePlanRef = null` | `lint-harness.py` | 阻断；要求归档或恢复引用 |
