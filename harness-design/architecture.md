@@ -51,6 +51,7 @@ repo/
 │  │  ├─ state-write.py         # 唯一写 workflow-state.json 的网关
 │  │  ├─ start-workflow.py      # 从 completed/archived 终态开启新的 workflow
 │  │  ├─ lifecycle-transaction.py # 生命周期流转事务协调器，编排 task/state/handoff 更新
+│  │  ├─ commit-task.py         # task 完成后的 Git commit gate
 │  │  ├─ archive-plan.py        # 归档 active plan package 并收口 workflow state
 │  │  ├─ complete-workflow.py   # 收口 L0/L1 direct workflow 并写 session 审计
 │  │  ├─ backlog-intake.py      # 追加 incoming work 到 work/backlog/backlogs.json
@@ -151,6 +152,7 @@ repo/
 - **`state-write.py`**：`workflow-state.json` 的**唯一更新网关**。接收 JSON Patch（或显式字段），依次执行"读当前 state → 应用 patch → 校验 phase 转换路径、terminal reset 与关键前置条件 → 调 `validate-state` → 临时文件 + rename 原子落盘 → 追加变更日志"。其中 `reviewing → archiving` 会回读 active plan 的 `tasks.json`，确认 active task 与 plan 全部 task 均已 `done`；`completed` / `archived` 重新进入 `active` 必须显式走 terminal reset 并使用新的 `workflowId`。除 `session-start.py` 创建首个 state 的 bootstrap 例外外，其他脚本一律只输出 patch，不直接写 state。
 - **`start-workflow.py`**：新 workflow 启动工具。只允许从 `completed` / `archived` 终态开启新的 `active` workflow；direct L0/L1 进入 `implementing/developer`，planned L2/L3 绑定已存在 active plan package 并进入 `planning/planner`。脚本先在隔离副本里 dry-run，再通过 `state-write.py --allow-terminal-reset` 写入真实 state，并执行 lint / validate postflight。
 - **`lifecycle-transaction.py`**：生命周期流转事务协调器。对一次 transition 执行 preflight、隔离 dry-run、调用 `update-task.py` 与 `state-write.py`、追加 `handoff.md`、postflight；它不绕过底层写入网关。当前支持 `activate-next`、`start-testing`、`start-review`、`review-failed`、`review-passed`，其中 review 流转消费 `tasks.json` 中的结构化 review gate。
+- **`commit-task.py`**：L2/L3 task 完成提交 gate。只在 `lifecycle-transaction.py review-passed` 成功后运行，确认目标 task 已 `done` 且 verification/review 均 passed，再执行 `git add -A` 与 `git commit`。它允许同一次提交包含 `review-passed` 产生的下一个 task 激活状态变更；它不写 `workflow-state.json`、不写 `tasks.json`，也不替代 lifecycle transition。
 - **`archive-plan.py`**：归档工具。要求当前 workflow 处于 `archiving`、active plan 内所有 task 均为 `done`，并且 `closure.md` 已由 Agent 写好；脚本校验后将 active plan package 迁移到 `work/plans/archived/<PLAN-ID>/`，再经 `state-write.py` 将 workflow 收到 archived 形态。
 - **`complete-workflow.py`**：L0/L1 direct workflow 收口工具。要求无 active plan、无 active task、当前处于 `reviewing/reviewer`，并要求调用方提供 verification evidence 与 review summary；脚本经 `state-write.py` 将 workflow 收到 `completed` 形态，并追加 `work/sessions/YYYY-MM-DD/workflow-completions.jsonl` 审计记录。
 - **`backlog-intake.py`**：backlog intake 写入网关。它从 `.harness/templates/backlogs.template.json` 初始化缺失的 `work/backlog/backlogs.json`，按 `BL-NNN` 分配 ID，校验完整 store 后原子追加。它不写 `workflow-state.json`、`tasks.json` 或 active plan 文件；`preempt` 只请求 LLM 评估，不自动中断当前 workflow。
@@ -181,3 +183,4 @@ repo/
 4. **入口统一**：常规外部调用走 `.harness/scripts/harness <subcmd>`；底层脚本保持可直接运行，供测试、调试和脚本编排使用。
 5. **运行态可清**：`rm -rf work/` 只回到初始态，不损坏 Harness 自身。
 6. **单写者**：`workflow-state.json` 的已有状态仅由 `state-write.py` 更新；`session-start.py` 只允许在 state 缺失且没有 active plan 时从模板创建首个 state。其他脚本若需修改 state，必须输出 patch 并经 `state-write.py` 落盘。`lint-harness.py` 会扫描 `.harness/scripts/` 下 Python 与无扩展名生产脚本中对该文件的直接写操作（如 `open(..., 'w')`、`Path.write_text(...)` 指向该路径）并视为违规。
+7. **task 完成即提交**：L2/L3 每个 task 经 `review-passed` 进入 `done` 后，必须运行 `commit-task.py --task <TASK-ID>` 生成 Git 提交，再开始下一项实现或归档 closure。commit gate 不是 task，不改变 state/tasks，只审计已完成 task 的交付边界。

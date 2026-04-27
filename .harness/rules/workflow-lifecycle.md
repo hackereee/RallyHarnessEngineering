@@ -123,6 +123,7 @@ planning ──► implementing ──► testing ──► reviewing ──► 
 - `state-write.py`：`workflow-state.json` 唯一写入网关。
 - `start-workflow.py`：从 `completed` / `archived` 终态开启新的 `active` workflow。它不直接写 state，而是经 `state-write.py --allow-terminal-reset` 执行显式 terminal reset；direct L0/L1 进入 `implementing/developer`，planned L2/L3 绑定已存在 active plan package 并进入 `planning/planner`。
 - `lifecycle-transaction.py`：生命周期流转事务协调器。对一次 transition 执行 `lint-harness.py` / `validate-state.py` preflight，在隔离副本里 dry-run，再调用 `update-task.py` 与 `state-write.py` 落盘并追加 `handoff.md`，最后执行 postflight。它不替代底层写入网关；当前支持 `activate-next`、`start-testing`、`start-review`、`review-failed`、`review-passed`。
+- `commit-task.py`：task 完成提交 gate。只在 `lifecycle-transaction.py review-passed` 之后使用；它读取 `workflow-state.json` 与当前 active plan 的 `tasks.json`，确认目标 task 已 `done` 且 verification/review 均 passed，然后执行 `git add -A` 与 `git commit`。它不写 state/tasks，不替代 lifecycle transition。
 - `archive-plan.py`：归档工具。只在 `currentPhase=archiving` 时使用；要求 Agent 已写好结构完整的 `closure.md`，并校验所有 task 均为 `done` 后迁移 active plan package，再经 `state-write.py` 收口 workflow state。
 - `complete-workflow.py`：L0/L1 direct workflow 收口工具。要求 `activePlanRef=null`、`activeTaskId=null`、没有 active plan 目录，且当前 workflow 处于 `reviewing/reviewer`；调用方必须提供 verification evidence 与 review summary。脚本经 `state-write.py` 将 `workflowStatus` 置为 `completed`，并把 completion evidence 写入 session 审计 JSONL。
 - `validate-state.py`：校验 workflow state 与 active task 的跨文件一致性。
@@ -136,12 +137,36 @@ planning ──► implementing ──► testing ──► reviewing ──► 
 | `implementing → testing` | 当前 task 变为 `testing/tester`；`verification.lastResult` 保持 `not_run` 或 `failed` | `currentPhase=testing`、`ownerRole=tester`、保留同一 `activeTaskId`、刷新 `nextAction` | 记录可执行验证命令或检查项 |
 | `testing → reviewing` | 当前 task 需先写入 `verification.lastResult=passed`，再变为 `reviewing/reviewer` | `currentPhase=reviewing`、`ownerRole=reviewer`、保留同一 `activeTaskId`、刷新 `nextAction` | `work/sessions/...` 记录验证证据摘要 |
 | `reviewing → implementing`（review failed） | 当前 task 必须已有 `review.lastResult=failed`，再回到 `implementing/developer`，保留或刷新 task 级 `nextAction` | `currentPhase=implementing`、`ownerRole=developer`、保留同一 `activeTaskId`、刷新 `nextAction` | `handoff.md` 或 session 记录 review findings 摘要 |
-| `reviewing → implementing`（next task） | 当前 task 满足 done 前置条件（含结构化 review passed）后变为 `done`；下一个可执行 task 变为 `implementing/developer` | `currentPhase=implementing`、`ownerRole=developer`、`activeTaskId=<NEXT-TASK-ID>`、刷新 `nextAction` | `select-next-task.py` 只读选择下一个 task |
-| `reviewing → archiving` | 当前 task 满足 done 前置条件（含结构化 review passed）后变为 `done`，且 plan 内所有 task 均为 `done` | `currentPhase=archiving`、`ownerRole=developer`、`activeTaskId=null`、刷新 `nextAction` | Agent 写 `closure.md` 后交给 `archive-plan.py` |
+| `reviewing → implementing`（next task） | 当前 task 满足 done 前置条件（含结构化 review passed）后变为 `done`；下一个可执行 task 变为 `implementing/developer` | `currentPhase=implementing`、`ownerRole=developer`、`activeTaskId=<NEXT-TASK-ID>`、刷新 `nextAction` | `select-next-task.py` 只读选择下一个 task；随后必须运行 `commit-task.py --task <COMPLETED-TASK-ID>`，提交可包含下一 task 激活状态变更 |
+| `reviewing → archiving` | 当前 task 满足 done 前置条件（含结构化 review passed）后变为 `done`，且 plan 内所有 task 均为 `done` | `currentPhase=archiving`、`ownerRole=developer`、`activeTaskId=null`、刷新 `nextAction` | 先运行 `commit-task.py --task <COMPLETED-TASK-ID>` 提交 task 完成结果，再由 Agent 写 `closure.md` 后交给 `archive-plan.py` |
 | `reviewing → completed`（L0/L1） | 无 `tasks.json` 变化 | `workflowStatus=completed`、`activePlanRef=null`、`activeTaskId=null`、保留 `currentPhase=reviewing` / `ownerRole=reviewer` 作为最后 gate 记录、刷新 `nextAction` | `complete-workflow.py` 记录 verification evidence 与 review summary 到 session 审计 |
 | terminal → new active workflow | direct L0/L1 无 `tasks.json`；planned L2/L3 要求 active plan package 已存在且通过 postflight lint | `workflowId=<NEW-ID>`、`workflowStatus=active`、显式重置 `activePlanRef` / `activeTaskId` / `currentPhase` / `ownerRole` / `nextAction` | 必须经 `start-workflow.py`，底层由 `state-write.py --allow-terminal-reset` 写入；禁止手写 state |
 
 结构化 review gate 已落到 `tasks.schema.json`：`review.lastResult = "passed"` 只有在 `score >= threshold`、存在 `review.checks`、无 critical finding、无 blocking important finding 时才可支撑 task `done`；`minor` finding 只能作为非阻断清理项。详细 review prose 仍写入 `work/sessions/...`、`handoff.md` 或 `closure.md`，`tasks.json` 只保存 compact gate summary。
+
+### 3.3 task 完成提交 gate
+
+L2/L3 每个 task 在 `lifecycle-transaction.py review-passed` 成功并完成 postflight 后，必须通过 `commit-task.py --task <COMPLETED-TASK-ID>` 产生一次 task 完成提交，然后才允许开始新的实现工作或编写归档 closure。
+
+该 gate 的位置是：
+
+1. 先完成当前 task 的 verification 与结构化 review。
+2. 运行 `lifecycle-transaction.py review-passed`，把当前 task 置为 `done`。
+3. 若还有后续 task，`review-passed` 可同时激活下一个 task；若没有后续 task，则进入 `archiving`。
+4. 立即运行 `commit-task.py --task <COMPLETED-TASK-ID>`。
+5. 再开始下一个 task 的实现，或继续写 `closure.md` 并归档 plan。
+
+提交可以包含 `review-passed` 产生的状态变更、`handoff.md` 追加记录、以及下一个 task 激活造成的 `workflow-state.json` / `tasks.json` 变化。这样能保证“完成当前 task”与“workflow 指向下一步”的审计状态在同一个提交中闭环。禁止在完成 task 后先做下一项实现再提交，否则提交边界会混入两个 task 的交付内容。
+
+`commit-task.py` 的确定性检查：
+
+- 目标 task 必须存在于当前 active plan 的 `tasks.json`。
+- 目标 task 必须 `status=done`。
+- `verification.lastResult` 必须为 `passed`，且必须存在 commands 或 checks。
+- `review.lastResult` 必须为 `passed`，`score >= threshold`，存在 `review.checks`，且无 critical finding、无 blocking important finding。
+- worktree 必须存在可提交 diff；空提交不代表 task 完成，必须阻断。
+
+commit gate 不是独立 task，也不改变 task status。Git commit 历史是提交审计来源，`tasks.json` 不保存 commit hash。
 
 ---
 

@@ -292,6 +292,10 @@ class LifecycleTransactionTest(unittest.TestCase):
             result = self.run_transaction(root, "review-passed")
 
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["commitGate"]["required"], True)
+            self.assertEqual(payload["commitGate"]["taskId"], "TASK-001")
+            self.assertIn("commit-task --task TASK-001", payload["commitGate"]["command"])
             task = json.loads((plan_dir / "tasks.json").read_text(encoding="utf-8"))["tasks"][0]
             self.assertEqual(task["status"], "done")
             self.assertEqual(task["verification"]["lastResult"], "passed")

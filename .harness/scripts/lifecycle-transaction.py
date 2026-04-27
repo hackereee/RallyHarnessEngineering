@@ -564,6 +564,12 @@ def execute_review_passed(root: Path) -> dict:
         "activeTaskId": result_active,
         "previousActiveTaskId": state["activeTaskId"],
         "nextAction": result_next,
+        "commitGate": {
+            "required": True,
+            "taskId": task_id,
+            "command": f"python3 .harness/scripts/harness commit-task --task {task_id}",
+            "timing": "after review-passed postflight and before new implementation work",
+        },
     }
 
 

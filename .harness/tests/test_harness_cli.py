@@ -41,6 +41,7 @@ class HarnessCliTest(unittest.TestCase):
             ".harness/scripts/validate-state.py",
             ".harness/scripts/state-write.py",
             ".harness/scripts/lifecycle-transaction.py",
+            ".harness/scripts/commit-task.py",
             ".harness/scripts/session-start.py",
             ".harness/scripts/start-workflow.py",
             ".harness/scripts/archive-plan.py",
@@ -113,8 +114,19 @@ class HarnessCliTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertIn("backlog-intake", result.stdout)
+        self.assertIn("commit-task", result.stdout)
         self.assertIn("check-project-env", result.stdout)
         self.assertIn("start-workflow", result.stdout)
+
+    def test_commit_task_help_delegates_to_commit_task_script(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+
+            result = self.run_harness(root, "commit-task", "--help")
+
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("Commit a completed Harness task", result.stdout)
 
     def test_check_project_env_help_delegates_to_runner(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,11 +1,11 @@
 {
   "$schema": "../.harness/schemas/workflow-state.schema.json",
-  "workflowId": "workflow-plan-005-v1",
-  "activePlanRef": null,
+  "workflowId": "workflow-plan-006-v1",
+  "activePlanRef": "./plans/active/PLAN-006/plan.md",
   "activeTaskId": null,
-  "workflowStatus": "archived",
+  "workflowStatus": "active",
   "currentPhase": "archiving",
   "ownerRole": "developer",
-  "nextAction": "开启下一个 workflow",
-  "updatedAt": "2026-04-27T21:22:31+08:00"
+  "nextAction": "归档当前 plan package",
+  "updatedAt": "2026-04-27T21:44:23+08:00"
 }

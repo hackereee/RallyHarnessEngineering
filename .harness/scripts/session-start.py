@@ -51,6 +51,7 @@ REQUIRED_ASSETS = (
     ".harness/scripts/select-next-task.py",
     ".harness/scripts/materialize-tasks.py",
     ".harness/scripts/lifecycle-transaction.py",
+    ".harness/scripts/commit-task.py",
     ".harness/scripts/archive-plan.py",
     ".harness/scripts/complete-workflow.py",
     ".harness/scripts/backlog-intake.py",

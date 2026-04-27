@@ -115,6 +115,7 @@ class SessionStartTest(unittest.TestCase):
             ".harness/scripts/select-next-task.py",
             ".harness/scripts/materialize-tasks.py",
             ".harness/scripts/lifecycle-transaction.py",
+            ".harness/scripts/commit-task.py",
             ".harness/scripts/archive-plan.py",
             ".harness/scripts/complete-workflow.py",
             ".harness/scripts/backlog-intake.py",
@@ -293,6 +294,18 @@ class SessionStartTest(unittest.TestCase):
             self.assertIn(".harness/schemas/project-contracts.schema.json", result.stderr + result.stdout)
             self.assertIn(".harness/templates/project-contracts.template.json", result.stderr + result.stdout)
             self.assertIn(".harness/scripts/check-project-env.py", result.stderr + result.stdout)
+            self.assertFalse((root / "work" / "workflow-state.json").exists())
+
+    def test_missing_commit_task_asset_is_blocked_by_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+            (root / ".harness" / "scripts" / "commit-task.py").unlink()
+
+            result = self.run_session_start(root)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn(".harness/scripts/commit-task.py", result.stderr + result.stdout)
             self.assertFalse((root / "work" / "workflow-state.json").exists())
 
     def test_session_start_rule_documents_startup_boundaries(self) -> None:

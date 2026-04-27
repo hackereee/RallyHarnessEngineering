@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../../.harness/schemas/tasks.schema.json",
+  "planId": "PLAN-006",
+  "planRef": "./plan.md",
+  "tasks": [
+    {
+      "taskId": "TASK-001",
+      "title": "Add task completion commit gate",
+      "planSection": "task-001-add-task-completion-commit-gate",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [],
+      "files": {
+        "create": [
+          ".harness/scripts/commit-task.py"
+        ],
+        "modify": [
+          ".harness/scripts/harness",
+          ".harness/scripts/session-start.py",
+          ".harness/scripts/lifecycle-transaction.py",
+          ".harness/rules/workflow-lifecycle.md",
+          ".harness/rules/archive-rules.md",
+          "harness-design/architecture.md"
+        ],
+        "test": [
+          ".harness/tests/test_commit_task.py",
+          ".harness/tests/test_harness_cli.py",
+          ".harness/tests/test_session_start.py",
+          ".harness/tests/test_lifecycle_transaction.py"
+        ]
+      },
+      "acceptance": [
+        "The lifecycle rule states that `review-passed` creates a required task completion commit gate before new implementation work.",
+        "The commit gate may include next-task activation state changes when the completed task is the one being committed.",
+        "The script rejects tasks that are not `done`, lack passed verification, lack passed review, or still have blocking review findings.",
+        "The script rejects an empty worktree diff and commits staged work with a task-scoped Chinese default message.",
+        "The CLI exposes the commit gate as a first-class Harness command.",
+        "Session startup treats the commit gate script as a required Harness asset."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_commit_task.py",
+          "python3 .harness/tests/test_harness_cli.py",
+          "python3 .harness/tests/test_session_start.py",
+          "python3 .harness/tests/test_lifecycle_transaction.py",
+          "python3 -m unittest discover -s .harness/tests -p 'test_*.py'",
+          "python3 .harness/scripts/lint-harness.py --root .",
+          "python3 .harness/scripts/validate-state.py --state work/workflow-state.json --schema .harness/schemas/workflow-state.schema.json"
+        ],
+        "checks": [],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 94,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "verification evidence is present and relevant",
+          "schema script CLI docs and tests are synchronized",
+          "lifecycle invariants hold and commit is modeled as a gate not a task"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-27/session-review-plan-006-task-001.md"
+      },
+      "blockedReason": ""
+    }
+  ]
+}

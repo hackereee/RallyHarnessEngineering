@@ -21,6 +21,7 @@ SUBCOMMANDS = {
     "session-start": "session-start.py",
     "start-workflow": "start-workflow.py",
     "transition": "lifecycle-transaction.py",
+    "commit-task": "commit-task.py",
     "archive-plan": "archive-plan.py",
     "complete-workflow": "complete-workflow.py",
     "complete": "complete-workflow.py",
@@ -53,6 +54,7 @@ def command_for(root: Path, subcmd: str, forwarded: list[str]) -> list[str]:
         "session-start",
         "start-workflow",
         "transition",
+        "commit-task",
         "archive-plan",
         "complete-workflow",
         "complete",
@@ -92,6 +94,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             "  session-start\n"
             "  start-workflow --level <L0|L1|L2|L3> --workflow-id <id> --next-action <action>\n"
             "  transition <action>\n"
+            "  commit-task --task <TASK-ID>\n"
             "  archive-plan <PLAN-ID>\n"
             "  complete-workflow ...\n"
             "  backlog-intake ...\n"

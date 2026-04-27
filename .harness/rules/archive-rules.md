@@ -10,6 +10,7 @@ L0/L1 没有 active plan package，不能使用 `archive-plan.py`。L0/L1 的收
 - `archive-plan.py` 只做确定性校验、目录迁移和 state patch。
 - `workflow-state.json` 仍只能经 `state-write.py` 写入。
 - `tasks.json` 在归档阶段不再修改；所有 task 必须已经是 `done`。
+- 进入 `archiving` 后，必须先对刚完成的 task 运行 `commit-task.py --task <TASK-ID>`，再编写 `closure.md` 和执行 `archive-plan.py`；task 完成提交与归档提交是两个不同边界。
 - L0/L1 completion 不迁移目录、不生成 `closure.md`，但必须提供 verification evidence 与 review summary。
 
 ## 归档前置条件
@@ -26,6 +27,13 @@ L0/L1 没有 active plan package，不能使用 `archive-plan.py`。L0/L1 的收
 - `work/plans/archived/<PLAN-ID>/` 已存在。
 
 ## 归档动作
+
+最后一个 task 完成后的标准动作：
+
+1. `lifecycle-transaction.py review-passed` 将当前 task 置为 `done`，并把 workflow 置为 `currentPhase=archiving`。
+2. 立即运行 `commit-task.py --task <TASK-ID>`，提交该 task 的交付内容、done 状态、handoff 记录与 archiving state。
+3. Agent 写入 `closure.md`。
+4. 运行 `archive-plan.py PLAN-001`。
 
 `archive-plan.py PLAN-001` 的标准动作：
 
