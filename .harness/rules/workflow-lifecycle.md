@@ -112,6 +112,7 @@ planning ──► implementing ──► testing ──► reviewing ──► 
 
 当前已实现的相关脚本：
 
+- `session-start.py`：会话启动 preflight。检查 Harness 关键工件与环境，运行 `lint-harness.py`，在 `workflow-state.json` 缺失且没有 active plan 时从模板创建首个 L0/L1 state，随后运行 `validate-state.py` 并写入 `work/sessions/YYYY-MM-DD/session-<id>.md` 审计快照。它不得修改已有 state，不得激活 task，不得推进 phase。
 - `materialize-tasks.py`：从已确认的 `plan.md` 任务契约生成初始 `tasks.json`，所有 task 均为 `idle/developer`。
 - `update-task.py`：`tasks.json` 的 task 状态写入网关。负责更新 task `status`、`ownerRole`、`currentStep`、`nextAction`、`verification`、`blockedReason`，并在写入前校验 `tasks.schema.json` 与 task 完成前置条件。
 - `select-next-task.py`：只读选择器。按 `dependsOn` 与 `status` 选出下一个可执行 `idle` task；若 plan 内所有 task 均为 `done`，输出进入 `archiving` 的 state patch 建议。它只输出给 `update-task.py` / `state-write.py` 使用的结构化建议，不直接写 `tasks.json` 或 `workflow-state.json`。
@@ -204,6 +205,7 @@ L0/L1 工作流完成的判定：`nextAction` 已为空或被替换为下一个 
 ## 9. 与 handoff、archive 的衔接
 
 - 阶段转换、活跃任务切换、等级升降级 —— 三者必须在 `handoff.md` 中追加一条记录；记录格式后续由 `handoff-rules.md` 固化。
+- `session-start.py` 写入的 session 文件只作为会话启动证据与 Agent 语义记录容器；它不是 workflow 或 task 真相源，不得用于替代 `workflow-state.nextAction`、`tasks.json` 或 `handoff.md`。
 - `archiving → completed/archived` 的最后一步应迁移 `plans/active/<PLAN-ID>/` 到 `plans/archived/<PLAN-ID>/`，生成 `closure.md`。该动作后续由 `archive-plan.py` 固化。L0/L1 无 plan，跳过迁移，仅写 closure 到 `work/sessions/` 下当日记录。
 
 ---

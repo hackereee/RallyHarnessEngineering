@@ -39,7 +39,7 @@ except ImportError:
 ACTIVE_STATUSES = {"implementing", "testing", "reviewing"}
 PLAN_ID_RE = re.compile(r"^[A-Z]+-[0-9]+$")
 WORKFLOW_STATE_FILE = "workflow-state.json"
-SOURCE_SCAN_ALLOWLIST = {"state-write.py", "lint-harness.py"}
+SOURCE_SCAN_ALLOWLIST = {"state-write.py", "lint-harness.py", "session-start.py"}
 
 
 class HarnessRuntimeError(Exception):
