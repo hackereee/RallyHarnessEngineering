@@ -25,8 +25,8 @@ Keep `plan.md` as the planning truth source and use structured task contract sec
 - Create: `.harness/schemas/tasks.schema.json`
 - Create: `.harness/templates/tasks.template.json`
 - Modify: `.harness/rules/workflow-lifecycle.md`
-- Test: `.harness/scripts/test_tasks_schema.py`
-- Test: `.harness/scripts/test_materialize_tasks.py`
+- Test: `.harness/tests/test_tasks_schema.py`
+- Test: `.harness/tests/test_materialize_tasks.py`
 
 ## Task Decomposition
 
@@ -52,7 +52,7 @@ Goal: Define the machine-checkable schema for plan tasks.
 Files:
 - Create: `.harness/schemas/tasks.schema.json`
 - Create: `.harness/templates/tasks.template.json`
-- Test: `.harness/scripts/test_tasks_schema.py`
+- Test: `.harness/tests/test_tasks_schema.py`
 
 Depends on: []
 
@@ -62,7 +62,7 @@ Acceptance:
 - `planSection` points to a stable anchor in `plan.md`.
 
 Verification:
-- Run: `python3 .harness/scripts/test_tasks_schema.py`
+- Run: `python3 .harness/tests/test_tasks_schema.py`
 - Check: `tasks.template.json` uses `taskId`, `planSection`, `dependsOn`, `acceptance`, and `verification`.
 
 <a id="task-002-materialize-task-contracts"></a>
@@ -73,7 +73,7 @@ Goal: Generate schema-valid `tasks.json` from structured task contract sections 
 
 Files:
 - Modify: `.harness/scripts/materialize-tasks.py`
-- Test: `.harness/scripts/test_materialize_tasks.py`
+- Test: `.harness/tests/test_materialize_tasks.py`
 
 Depends on: [TASK-001]
 
@@ -83,7 +83,7 @@ Acceptance:
 - Generated tasks are initially `idle` and owned by `developer`.
 
 Verification:
-- Run: `python3 .harness/scripts/test_materialize_tasks.py`
+- Run: `python3 .harness/tests/test_materialize_tasks.py`
 - Check: generated `tasks.json` does not contain a `review` field before schema support exists.
 
 <a id="task-003-document-lifecycle-boundary"></a>
@@ -94,7 +94,7 @@ Goal: Document where plan writing stops and workflow lifecycle task activation b
 
 Files:
 - Modify: `.harness/rules/workflow-lifecycle.md`
-- Test: `.harness/scripts/test_validate_state.py`
+- Test: `.harness/tests/test_validate_state.py`
 
 Depends on: [TASK-001, TASK-002]
 
@@ -104,5 +104,5 @@ Acceptance:
 - Testing and review remain workflow gates, not independent tasks.
 
 Verification:
-- Run: `python3 .harness/scripts/test_validate_state.py`
+- Run: `python3 .harness/tests/test_validate_state.py`
 - Check: workflow-state validation accepts planning state with `activeTaskId = null` and `ownerRole = planner`.

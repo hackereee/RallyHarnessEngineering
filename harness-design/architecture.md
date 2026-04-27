@@ -33,19 +33,21 @@ repo/
 │  │  └─ plan-writing/
 │  │     └─ SKILL.md           # 生成 L2/L3 active plan package 的 repo-local skill
 │  │
-│  └─ scripts/                  # 自动化脚本，统一子命令入口
-│     ├─ session-start.py      # 会话启动 preflight、首次 state bootstrap、审计快照
-│     ├─ validate-state.py
-│     ├─ materialize-tasks.py  # 从 plan.md 任务契约生成 tasks.json
-│     ├─ update-task.py        # 唯一写 tasks.json task 状态的网关
-│     ├─ select-next-task.py   # 只读选择下一个可执行 task，并输出 state patch 建议
-│     ├─ state-write.py        # 唯一写 workflow-state.json 的网关
-│     ├─ lifecycle-transaction.py # 生命周期流转事务协调器，编排 task/state/handoff 更新
-│     ├─ lint-harness.py       # 只读巡检目录结构与 Harness 全局不变量
-│     └─ test_*.py             # Harness 契约、脚本与模板的回归测试
+│  ├─ scripts/                  # 自动化脚本，统一子命令入口
+│  │  ├─ session-start.py       # 会话启动 preflight、首次 state bootstrap、审计快照
+│  │  ├─ validate-state.py
+│  │  ├─ materialize-tasks.py   # 从 plan.md 任务契约生成 tasks.json
+│  │  ├─ update-task.py         # 唯一写 tasks.json task 状态的网关
+│  │  ├─ select-next-task.py    # 只读选择下一个可执行 task，并输出 state patch 建议
+│  │  ├─ state-write.py         # 唯一写 workflow-state.json 的网关
+│  │  ├─ lifecycle-transaction.py # 生命周期流转事务协调器，编排 task/state/handoff 更新
+│  │  └─ lint-harness.py        # 只读巡检目录结构与 Harness 全局不变量
+│  │
+│  │  # 规划中的 lifecycle 工具：
+│  │  # harness / check-env.py / archive-plan.py
 │
-│     # 规划中的 lifecycle 工具：
-│     # harness / check-env.py / archive-plan.py
+│  └─ tests/                    # Harness 契约、脚本与模板的回归测试
+│     └─ test_*.py
 │
 ├─ work/                        # 运行态：随业务滚动、可被清理的数据
 │  ├─ workflow-state.json       # 当前工作流运行态（顶部 $schema 指向 .harness/schemas/）
@@ -83,6 +85,7 @@ repo/
 | 规则 | `.harness/rules/` | 长 | 是 |
 | 技能 | `.harness/skills/` | 长 | 是 |
 | 工具 | `.harness/scripts/` | 长 | 是 |
+| 测试 | `.harness/tests/` | 长 | 是 |
 | 运行态 | `work/` | 短 | 部分（`work/plans/*`、`work/sessions/*` 建议纳管；`workflow-state.json` 可选） |
 | 业务 | `src/` | 独立 | 是 |
 
@@ -123,7 +126,9 @@ repo/
 - **`state-write.py`**：`workflow-state.json` 的**唯一更新网关**。接收 JSON Patch（或显式字段），依次执行"读当前 state → 应用 patch → 校验 phase 转换路径 → 调 `validate-state` → 临时文件 + rename 原子落盘 → 追加变更日志"。除 `session-start.py` 创建首个 state 的 bootstrap 例外外，其他脚本一律只输出 patch，不直接写 state。
 - **`lifecycle-transaction.py`**：生命周期流转事务协调器。对一次 transition 执行 preflight、隔离 dry-run、调用 `update-task.py` 与 `state-write.py`、追加 `handoff.md`、postflight；它不绕过底层写入网关。当前支持 `activate-next`、`start-testing`、`start-review`、`review-failed`、`review-passed`。
 - **`lint-harness.py`**：只读巡检目录结构与全局不变量。覆盖 `work/` 初始态、单 active plan、active plan package 完整性、`activePlanRef` 与目录一致性、active task 数量，以及非网关脚本直接写 `workflow-state.json`。
-- **`test_*.py`**：Harness 契约、脚本与模板的回归测试。
+
+### `.harness/tests/`
+- **`test_*.py`**：Harness 契约、脚本与模板的回归测试。测试与生产脚本分目录存放，避免 `.harness/scripts/` 同时承担工具入口与测试集合两种职责。
 
 规划中的 lifecycle 工具：
 - **`harness`**：统一入口，子命令分发。例：`harness validate-state`、`harness archive-plan PLAN-001`。

@@ -29,7 +29,7 @@ Goal: Define the schema contract.
 Files:
 - Create: `.harness/schemas/tasks.schema.json`
 - Modify: `.harness/templates/tasks.template.json`
-- Test: `.harness/scripts/test_materialize_tasks.py`
+- Test: `.harness/tests/test_materialize_tasks.py`
 
 Depends on: []
 
@@ -107,7 +107,7 @@ class MaterializeTasksTest(unittest.TestCase):
             self.assertEqual(data["tasks"][1]["dependsOn"], ["TASK-001"])
             self.assertEqual(data["tasks"][0]["files"]["create"], [".harness/schemas/tasks.schema.json"])
             self.assertEqual(data["tasks"][0]["files"]["modify"], [".harness/templates/tasks.template.json"])
-            self.assertEqual(data["tasks"][0]["files"]["test"], [".harness/scripts/test_materialize_tasks.py"])
+            self.assertEqual(data["tasks"][0]["files"]["test"], [".harness/tests/test_materialize_tasks.py"])
             self.assertEqual(
                 data["tasks"][0]["verification"]["commands"],
                 ["python3 -m json.tool work/plans/active/PLAN-123/tasks.json"],

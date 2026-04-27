@@ -36,7 +36,7 @@ def task_fixture(task_id: str, title: str, *, status: str = "idle", depends_on: 
         "files": {"create": [], "modify": [f"src/{slug}.py"], "test": []},
         "acceptance": [f"{task_id} acceptance is met"],
         "verification": {
-            "commands": ["python3 -m unittest discover -s .harness/scripts -p 'test_*.py'"],
+            "commands": ["python3 -m unittest discover -s .harness/tests -p 'test_*.py'"],
             "checks": [],
             "lastResult": verification_result,
         },

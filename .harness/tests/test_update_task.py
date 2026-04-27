@@ -101,7 +101,7 @@ class UpdateTaskTest(unittest.TestCase):
                 "--verification-last-result",
                 "failed",
                 "--verification-command",
-                "python3 .harness/scripts/test_update_task.py",
+                "python3 .harness/tests/test_update_task.py",
             )
 
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
@@ -115,7 +115,7 @@ class UpdateTaskTest(unittest.TestCase):
             self.assertEqual(task["verification"]["lastResult"], "failed")
             self.assertEqual(
                 task["verification"]["commands"],
-                ["python3 .harness/scripts/test_update_task.py"],
+                ["python3 .harness/tests/test_update_task.py"],
             )
 
     def test_rejects_done_when_dependency_is_not_done(self) -> None:

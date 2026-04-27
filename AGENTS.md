@@ -77,15 +77,15 @@
 当前可用的局部验证入口包括：
 
 ```bash
-python3 .harness/scripts/test_materialize_tasks.py
-python3 .harness/scripts/test_lint_harness.py
-python3 .harness/scripts/test_lifecycle_transaction.py
-python3 .harness/scripts/test_session_start.py
-python3 .harness/scripts/test_select_next_task.py
-python3 .harness/scripts/test_state_write.py
-python3 .harness/scripts/test_tasks_schema.py
-python3 .harness/scripts/test_update_task.py
-python3 .harness/scripts/test_validate_state.py
+python3 .harness/tests/test_materialize_tasks.py
+python3 .harness/tests/test_lint_harness.py
+python3 .harness/tests/test_lifecycle_transaction.py
+python3 .harness/tests/test_session_start.py
+python3 .harness/tests/test_select_next_task.py
+python3 .harness/tests/test_state_write.py
+python3 .harness/tests/test_tasks_schema.py
+python3 .harness/tests/test_update_task.py
+python3 .harness/tests/test_validate_state.py
 ```
 
 完成前不要只说“应该可以”；必须说明实际执行过的验证，或明确说明为什么未执行。
