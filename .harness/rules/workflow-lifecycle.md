@@ -224,7 +224,7 @@ L0/L1 工作流完成的判定：
 
 ## 9. 与 handoff、archive 的衔接
 
-- 阶段转换、活跃任务切换、等级升降级 —— 三者必须在 `handoff.md` 中追加一条记录；记录格式后续由 `handoff-rules.md` 固化。
+- 阶段转换、活跃任务切换、等级升降级 —— 三者必须在 `handoff.md` 中追加一条记录；记录格式见 `.harness/rules/handoff-rules.md`。
 - `session-start.py` 写入的 session 文件只作为会话启动证据与 Agent 语义记录容器；它不是 workflow 或 task 真相源，不得用于替代 `workflow-state.nextAction`、`tasks.json` 或 `handoff.md`。
 - `archiving → archived` 的最后一步应先由 Agent 写 `closure.md`，再由 `archive-plan.py` 迁移 `plans/active/<PLAN-ID>/` 到 `plans/archived/<PLAN-ID>/` 并经 `state-write.py` 将 `workflowStatus` 置为 `archived`。
 - L0/L1 无 plan，跳过 plan 迁移与 `closure.md`，通过 `complete-workflow.py` 将 workflow 收到 `completed`，并在 session 审计 JSONL 中记录 verification evidence 与 review summary。

@@ -72,6 +72,34 @@ def reviewing_task() -> dict:
     }
 
 
+def valid_handoff() -> str:
+    return (
+        "# Handoff\n\n"
+        "- workflowId: workflow-plan-001-v1\n"
+        "- planRef: ./plans/active/PLAN-001/plan.md\n"
+        "- activeTaskId: TASK-001\n"
+        "- currentPhase: reviewing\n"
+        "- taskStatus: TASK-001 reviewing\n"
+        "- ownerRole: reviewer\n"
+        "- sourceSessionId: session-test\n"
+        "\n"
+        "## Current Status\n\n"
+        "The active task is in review.\n"
+        "\n"
+        "## Role Handoff\n\n"
+        "- fromRole: tester\n"
+        "- toRole: reviewer\n"
+        "- reason: verification passed\n"
+        "- stateSource: workflow-state.json and tasks.json\n"
+        "\n"
+        "## Risks\n\n"
+        "- Plan-backed workflows must not use complete-workflow.py.\n"
+        "\n"
+        "## Next Action\n\n"
+        "Review the active task.\n"
+    )
+
+
 class CompleteWorkflowTest(unittest.TestCase):
     def write_harness_assets(self, root: Path) -> None:
         for relative in (
@@ -106,7 +134,7 @@ class CompleteWorkflowTest(unittest.TestCase):
             "### TASK-001: Implement planned workflow\n",
             encoding="utf-8",
         )
-        (plan_dir / "handoff.md").write_text("# Handoff\n", encoding="utf-8")
+        (plan_dir / "handoff.md").write_text(valid_handoff(), encoding="utf-8")
         (plan_dir / "tasks.json").write_text(
             json.dumps(
                 {

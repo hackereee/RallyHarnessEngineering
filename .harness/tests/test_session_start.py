@@ -12,6 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / ".harness" / "scripts" / "session-start.py"
+SESSION_START_RULE = REPO_ROOT / ".harness" / "rules" / "session-start.md"
 
 
 def base_task() -> dict:
@@ -58,6 +59,34 @@ def direct_state() -> dict:
     }
 
 
+def valid_handoff() -> str:
+    return (
+        "# Handoff\n\n"
+        "- workflowId: workflow-plan-001-v1\n"
+        "- planRef: ./plans/active/PLAN-001/plan.md\n"
+        "- activeTaskId: null\n"
+        "- currentPhase: planning\n"
+        "- taskStatus: all tasks idle\n"
+        "- ownerRole: planner\n"
+        "- sourceSessionId: session-test\n"
+        "\n"
+        "## Current Status\n\n"
+        "The active plan exists but workflow state is missing.\n"
+        "\n"
+        "## Role Handoff\n\n"
+        "- fromRole: planner\n"
+        "- toRole: developer\n"
+        "- reason: test fixture for missing state recovery\n"
+        "- stateSource: workflow-state.json and tasks.json\n"
+        "\n"
+        "## Risks\n\n"
+        "- session-start.py must not guess state from active plan files.\n"
+        "\n"
+        "## Next Action\n\n"
+        "Block startup and request semantic recovery.\n"
+    )
+
+
 class SessionStartTest(unittest.TestCase):
     def write_harness_assets(self, root: Path) -> None:
         for relative in (
@@ -73,6 +102,8 @@ class SessionStartTest(unittest.TestCase):
             ".harness/rules/workflow-lifecycle.md",
             ".harness/rules/archive-rules.md",
             ".harness/rules/backlog-rules.md",
+            ".harness/rules/handoff-rules.md",
+            ".harness/rules/session-start.md",
             ".harness/scripts/lint-harness.py",
             ".harness/scripts/validate-state.py",
             ".harness/scripts/state-write.py",
@@ -123,7 +154,7 @@ class SessionStartTest(unittest.TestCase):
             "### TASK-001: Implement feature\n",
             encoding="utf-8",
         )
-        (plan_dir / "handoff.md").write_text("# Handoff\n", encoding="utf-8")
+        (plan_dir / "handoff.md").write_text(valid_handoff(), encoding="utf-8")
         (plan_dir / "tasks.json").write_text(
             json.dumps(
                 {
@@ -209,6 +240,35 @@ class SessionStartTest(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
             self.assertIn(".harness/rules/backlog-rules.md", result.stderr + result.stdout)
             self.assertFalse((root / "work" / "workflow-state.json").exists())
+
+    def test_missing_handoff_and_session_rule_assets_are_blocked_by_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+            for relative in (
+                ".harness/rules/handoff-rules.md",
+                ".harness/rules/session-start.md",
+            ):
+                path = root / relative
+                if path.exists():
+                    path.unlink()
+
+            result = self.run_session_start(root)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn(".harness/rules/handoff-rules.md", result.stderr + result.stdout)
+            self.assertIn(".harness/rules/session-start.md", result.stderr + result.stdout)
+            self.assertFalse((root / "work" / "workflow-state.json").exists())
+
+    def test_session_start_rule_documents_startup_boundaries(self) -> None:
+        text = SESSION_START_RULE.read_text(encoding="utf-8")
+
+        self.assertIn("validate existing state", text)
+        self.assertIn("bootstrap missing state", text)
+        self.assertIn("block missing state with active plan", text)
+        self.assertIn("must not modify existing workflow-state.json", text)
+        self.assertIn("session audit file", text)
+        self.assertIn("not a truth source", text)
 
     def test_references_previous_session_without_parsing_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -68,6 +68,34 @@ def base_state(
     }
 
 
+def valid_handoff(plan_id: str = "PLAN-001") -> str:
+    return (
+        "# Handoff\n\n"
+        "- workflowId: workflow-plan-001-v1\n"
+        f"- planRef: ./plans/active/{plan_id}/plan.md\n"
+        "- activeTaskId: TASK-001\n"
+        "- currentPhase: implementing\n"
+        "- taskStatus: TASK-001 implementing\n"
+        "- ownerRole: developer\n"
+        "- sourceSessionId: session-test\n"
+        "\n"
+        "## Current Status\n\n"
+        "The active task is in implementation.\n"
+        "\n"
+        "## Role Handoff\n\n"
+        "- fromRole: planner\n"
+        "- toRole: developer\n"
+        "- reason: task activation completed\n"
+        "- stateSource: workflow-state.json and tasks.json\n"
+        "\n"
+        "## Risks\n\n"
+        "- Keep state writes behind gateways.\n"
+        "\n"
+        "## Next Action\n\n"
+        "Execute the active task.\n"
+    )
+
+
 class LintHarnessTest(unittest.TestCase):
     def write_harness_root(self, root: Path) -> None:
         schemas_dir = root / ".harness" / "schemas"
@@ -100,7 +128,7 @@ class LintHarnessTest(unittest.TestCase):
         )
         (plan_dir / "plan.md").write_text(f"# Plan\n\n{anchors}\n", encoding="utf-8")
         if include_handoff:
-            (plan_dir / "handoff.md").write_text("# Handoff\n", encoding="utf-8")
+            (plan_dir / "handoff.md").write_text(valid_handoff(plan_id), encoding="utf-8")
         manifest = {
             "$schema": "../../../../.harness/schemas/tasks.schema.json",
             "planId": plan_id,
@@ -192,6 +220,64 @@ class LintHarnessTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
             self.assertIn("缺少 handoff.md", result.stdout + result.stderr)
+
+    def test_rejects_active_plan_with_structurally_invalid_handoff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_root(root)
+            plan_dir = self.write_plan(root)
+            (plan_dir / "handoff.md").write_text(
+                "# Handoff\n\n"
+                "- workflowId: workflow-plan-001-v1\n"
+                "- planRef: ./plans/active/PLAN-001/plan.md\n"
+                "\n"
+                "## Current Status\n\n"
+                "Missing required header fields and sections.\n",
+                encoding="utf-8",
+            )
+            self.write_state(root)
+
+            result = self.run_lint(root)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("handoff.md", result.stdout + result.stderr)
+            self.assertIn("缺少必要字段", result.stdout + result.stderr)
+
+    def test_rejects_handoff_fields_outside_top_metadata_block(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_root(root)
+            plan_dir = self.write_plan(root)
+            (plan_dir / "handoff.md").write_text(
+                "# Handoff\n\n"
+                "## Current Status\n\n"
+                "- workflowId: workflow-plan-001-v1\n"
+                "- planRef: ./plans/active/PLAN-001/plan.md\n"
+                "- activeTaskId: TASK-001\n"
+                "- currentPhase: implementing\n"
+                "- taskStatus: TASK-001 implementing\n"
+                "- ownerRole: developer\n"
+                "- sourceSessionId: session-test\n"
+                "\n"
+                "## Role Handoff\n\n"
+                "- fromRole: planner\n"
+                "- toRole: developer\n"
+                "- reason: task activation completed\n"
+                "- stateSource: workflow-state.json and tasks.json\n"
+                "\n"
+                "## Risks\n\n"
+                "- Keep state writes behind gateways.\n"
+                "\n"
+                "## Next Action\n\n"
+                "Execute the active task.\n",
+                encoding="utf-8",
+            )
+            self.write_state(root)
+
+            result = self.run_lint(root)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("缺少必要字段", result.stdout + result.stderr)
 
     def test_rejects_multiple_active_tasks_in_tasks_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

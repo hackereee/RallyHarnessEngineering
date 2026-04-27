@@ -91,6 +91,34 @@ def workflow_state(phase: str, owner_role: str, active_task_id: str | None) -> d
     }
 
 
+def valid_handoff() -> str:
+    return (
+        "# Handoff\n\n"
+        "- workflowId: workflow-plan-001-v1\n"
+        "- planRef: ./plans/active/PLAN-001/plan.md\n"
+        "- activeTaskId: null\n"
+        "- currentPhase: planning\n"
+        "- taskStatus: all tasks idle\n"
+        "- ownerRole: planner\n"
+        "- sourceSessionId: session-test\n"
+        "\n"
+        "## Current Status\n\n"
+        "The plan package is ready for lifecycle transaction testing.\n"
+        "\n"
+        "## Role Handoff\n\n"
+        "- fromRole: planner\n"
+        "- toRole: developer\n"
+        "- reason: plan package is ready for activation\n"
+        "- stateSource: workflow-state.json and tasks.json\n"
+        "\n"
+        "## Risks\n\n"
+        "- Keep task and state writes behind lifecycle gateways.\n"
+        "\n"
+        "## Next Action\n\n"
+        "Activate the first eligible idle task.\n"
+    )
+
+
 class LifecycleTransactionTest(unittest.TestCase):
     def write_harness_assets(self, root: Path) -> None:
         for relative in (
@@ -127,15 +155,7 @@ class LifecycleTransactionTest(unittest.TestCase):
             "### TASK-002: Extend lifecycle transaction\n",
             encoding="utf-8",
         )
-        (plan_dir / "handoff.md").write_text(
-            "# Handoff\n\n"
-            "- workflowId: workflow-plan-001-v1\n"
-            "- planRef: ./plans/active/PLAN-001/plan.md\n"
-            "- activeTaskId: null\n"
-            "- currentPhase: planning\n"
-            "- ownerRole: planner\n",
-            encoding="utf-8",
-        )
+        (plan_dir / "handoff.md").write_text(valid_handoff(), encoding="utf-8")
         (plan_dir / "tasks.json").write_text(
             json.dumps(
                 {

@@ -21,9 +21,10 @@
 1. `harness-design/architecture.md`：整体目录分层、关键文件职责、核心不变量。
 2. `harness-design/task-level.md`：L0/L1/L2/L3 任务等级判断。
 3. `.harness/rules/workflow-lifecycle.md`：workflow-state、task status、ownerRole、phase 的语义规则。
-4. `learning-notes/scripts-vs-llm.md`：脚本与 LLM 的职责边界。
-5. `learning-notes/tasks-workflow-gates.md`：`tasks.json` 与 testing/review gate 的边界。
-6. 相关 schema、template、script、test 文件。
+4. 涉及会话恢复或启动时读 `.harness/rules/session-start.md`；涉及 handoff 时读 `.harness/rules/handoff-rules.md`。
+5. `learning-notes/scripts-vs-llm.md`：脚本与 LLM 的职责边界。
+6. `learning-notes/tasks-workflow-gates.md`：`tasks.json` 与 testing/review gate 的边界。
+7. 相关 schema、template、script、test 文件。
 
 不要只读单个文件后下结论。涉及状态机、schema 或脚本时，必须同时核对规则文档、schema、实现和测试。
 
@@ -83,6 +84,7 @@ python3 .harness/tests/test_lifecycle_transaction.py
 python3 .harness/tests/test_archive_plan.py
 python3 .harness/tests/test_complete_workflow.py
 python3 .harness/tests/test_harness_cli.py
+python3 .harness/tests/test_handoff_rules.py
 python3 .harness/tests/test_session_start.py
 python3 .harness/tests/test_select_next_task.py
 python3 .harness/tests/test_state_write.py

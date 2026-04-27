@@ -38,6 +38,8 @@ REQUIRED_ASSETS = (
     ".harness/rules/workflow-lifecycle.md",
     ".harness/rules/archive-rules.md",
     ".harness/rules/backlog-rules.md",
+    ".harness/rules/handoff-rules.md",
+    ".harness/rules/session-start.md",
     ".harness/scripts/validate-state.py",
     ".harness/scripts/lint-harness.py",
     ".harness/scripts/state-write.py",

@@ -1,5 +1,7 @@
 # Handoff
 
+This file is a recovery summary. Truth sources remain `workflow-state.json` and `tasks.json`.
+
 - workflowId: workflow-plan-001-v1
 - planRef: ./plans/active/PLAN-001/plan.md
 - activeTaskId: null

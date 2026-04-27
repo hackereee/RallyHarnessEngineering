@@ -1,11 +1,11 @@
 {
   "$schema": "../.harness/schemas/workflow-state.schema.json",
-  "workflowId": "workflow-adhoc-20260427-001",
+  "workflowId": "workflow-plan-002-v1",
   "activePlanRef": null,
   "activeTaskId": null,
   "workflowStatus": "archived",
   "currentPhase": "archiving",
   "ownerRole": "developer",
   "nextAction": "开启下一个 workflow",
-  "updatedAt": "2026-04-27T16:07:35+08:00"
+  "updatedAt": "2026-04-27T17:06:04+08:00"
 }

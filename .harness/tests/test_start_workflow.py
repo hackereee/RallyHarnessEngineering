@@ -71,6 +71,34 @@ def task_fixture() -> dict:
     }
 
 
+def valid_handoff() -> str:
+    return (
+        "# Handoff\n\n"
+        "- workflowId: workflow-plan-002-v1\n"
+        "- planRef: ./plans/active/PLAN-002/plan.md\n"
+        "- activeTaskId: null\n"
+        "- currentPhase: planning\n"
+        "- taskStatus: all tasks idle\n"
+        "- ownerRole: planner\n"
+        "- sourceSessionId: session-test\n"
+        "\n"
+        "## Current Status\n\n"
+        "The active plan package exists before workflow start.\n"
+        "\n"
+        "## Role Handoff\n\n"
+        "- fromRole: planner\n"
+        "- toRole: developer\n"
+        "- reason: plan package is ready for workflow start\n"
+        "- stateSource: workflow-state.json and tasks.json\n"
+        "\n"
+        "## Risks\n\n"
+        "- start-workflow.py must bind the plan without activating a task.\n"
+        "\n"
+        "## Next Action\n\n"
+        "Activate the first eligible idle task.\n"
+    )
+
+
 class StartWorkflowTest(unittest.TestCase):
     def write_harness_assets(self, root: Path) -> None:
         for relative in (
@@ -103,7 +131,7 @@ class StartWorkflowTest(unittest.TestCase):
             "### TASK-001: Implement planned workflow\n",
             encoding="utf-8",
         )
-        (plan_dir / "handoff.md").write_text("# Handoff\n", encoding="utf-8")
+        (plan_dir / "handoff.md").write_text(valid_handoff(), encoding="utf-8")
         (plan_dir / "tasks.json").write_text(
             json.dumps(
                 {

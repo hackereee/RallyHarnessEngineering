@@ -59,6 +59,34 @@ def archiving_state() -> dict:
     }
 
 
+def valid_handoff() -> str:
+    return (
+        "# Handoff\n\n"
+        "- workflowId: workflow-plan-001-v1\n"
+        "- planRef: ./plans/active/PLAN-001/plan.md\n"
+        "- activeTaskId: null\n"
+        "- currentPhase: archiving\n"
+        "- taskStatus: all tasks done\n"
+        "- ownerRole: developer\n"
+        "- sourceSessionId: session-test\n"
+        "\n"
+        "## Current Status\n\n"
+        "All tasks are done and the plan is ready for archive.\n"
+        "\n"
+        "## Role Handoff\n\n"
+        "- fromRole: reviewer\n"
+        "- toRole: developer\n"
+        "- reason: review passed and archive gate is active\n"
+        "- stateSource: workflow-state.json and tasks.json\n"
+        "\n"
+        "## Risks\n\n"
+        "- Confirm closure.md exists before archive.\n"
+        "\n"
+        "## Next Action\n\n"
+        "Archive the active plan package.\n"
+    )
+
+
 class ArchivePlanTest(unittest.TestCase):
     def write_harness_assets(self, root: Path) -> None:
         for relative in (
@@ -88,7 +116,7 @@ class ArchivePlanTest(unittest.TestCase):
             "### TASK-001: Task TASK-001\n",
             encoding="utf-8",
         )
-        (plan_dir / "handoff.md").write_text("# Handoff\n", encoding="utf-8")
+        (plan_dir / "handoff.md").write_text(valid_handoff(), encoding="utf-8")
         (plan_dir / "tasks.json").write_text(
             json.dumps(
                 {

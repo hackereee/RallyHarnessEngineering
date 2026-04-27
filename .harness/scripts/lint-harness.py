@@ -40,6 +40,22 @@ ACTIVE_STATUSES = {"implementing", "testing", "reviewing"}
 PLAN_ID_RE = re.compile(r"^[A-Z]+-[0-9]+$")
 WORKFLOW_STATE_FILE = "workflow-state.json"
 SOURCE_SCAN_ALLOWLIST = {"state-write.py", "lint-harness.py", "session-start.py"}
+HANDOFF_REQUIRED_FIELDS = (
+    "workflowId",
+    "planRef",
+    "activeTaskId",
+    "currentPhase",
+    "taskStatus",
+    "ownerRole",
+    "sourceSessionId",
+)
+HANDOFF_REQUIRED_SECTIONS = (
+    "## Current Status",
+    "## Role Handoff",
+    "## Risks",
+    "## Next Action",
+)
+HANDOFF_ROLE_FIELDS = ("fromRole", "toRole", "reason", "stateSource")
 
 
 class HarnessRuntimeError(Exception):
@@ -153,6 +169,10 @@ def lint_active_plan_package(plan_dir: Path, tasks_schema: Path) -> tuple[list[s
         if not (plan_dir / filename).exists():
             errors.append(f"[directory] active plan {plan_dir.name} 缺少 {filename}")
 
+    handoff_path = plan_dir / "handoff.md"
+    if handoff_path.exists():
+        errors += validate_handoff_structure(handoff_path)
+
     manifest: dict | None = None
     tasks_path = plan_dir / "tasks.json"
     if tasks_path.exists():
@@ -167,6 +187,54 @@ def lint_active_plan_package(plan_dir: Path, tasks_schema: Path) -> tuple[list[s
         errors += validate_task_manifest_semantics(loaded, plan_dir, plan_text)
 
     return errors, manifest
+
+
+def has_handoff_field(text: str, field: str) -> bool:
+    return re.search(rf"(?m)^-\s*{re.escape(field)}\s*:", text) is not None
+
+
+def handoff_metadata_block(text: str) -> str:
+    match = re.search(r"(?m)^##\s+", text)
+    return text[:match.start()] if match else text
+
+
+def validate_handoff_structure(handoff_path: Path) -> list[str]:
+    text = handoff_path.read_text(encoding="utf-8")
+    errors: list[str] = []
+
+    if not text.startswith("# Handoff"):
+        errors.append(f"[handoff] {handoff_path} 必须以 '# Handoff' 开头")
+
+    metadata = handoff_metadata_block(text)
+    missing_fields = [
+        field for field in HANDOFF_REQUIRED_FIELDS if not has_handoff_field(metadata, field)
+    ]
+    if missing_fields:
+        errors.append(
+            f"[handoff] {handoff_path} 缺少必要字段: {', '.join(missing_fields)}"
+        )
+
+    missing_sections = [section for section in HANDOFF_REQUIRED_SECTIONS if section not in text]
+    if missing_sections:
+        errors.append(
+            f"[handoff] {handoff_path} 缺少必要章节: {', '.join(missing_sections)}"
+        )
+
+    role_section_match = re.search(
+        r"(?ms)^## Role Handoff\s*(?P<body>.*?)(?=^## |\Z)",
+        text,
+    )
+    role_body = role_section_match.group("body") if role_section_match else ""
+    missing_role_fields = [
+        field for field in HANDOFF_ROLE_FIELDS if not has_handoff_field(role_body, field)
+    ]
+    if missing_role_fields:
+        errors.append(
+            f"[handoff] {handoff_path} Role Handoff 缺少必要字段: "
+            f"{', '.join(missing_role_fields)}"
+        )
+
+    return errors
 
 
 def lint_workflow_state(

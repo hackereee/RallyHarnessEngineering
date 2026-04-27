@@ -1,0 +1,177 @@
+{
+  "$schema": "../../../../.harness/schemas/tasks.schema.json",
+  "planId": "PLAN-002",
+  "planRef": "./plan.md",
+  "tasks": [
+    {
+      "taskId": "TASK-001",
+      "title": "Define handoff rules",
+      "planSection": "task-001-define-handoff-rules",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [],
+      "files": {
+        "create": [
+          ".harness/rules/handoff-rules.md",
+          ".harness/tests/test_handoff_rules.py"
+        ],
+        "modify": [
+          ".harness/templates/handoff.template.md",
+          ".harness/scripts/lint-harness.py",
+          ".harness/tests/test_lint_harness.py",
+          "harness-design/handoff.template.md"
+        ],
+        "test": []
+      },
+      "acceptance": [
+        "`handoff-rules.md` defines truth sources, required sections, required header fields, and lifecycle transaction entry shape.",
+        "`.harness/templates/handoff.template.md` conforms to the handoff rule structure.",
+        "`lint-harness.py` rejects active plan packages whose `handoff.md` is missing required structural sections or required header fields.",
+        "The lint check remains structural and does not judge prose quality or task completion.",
+        "`harness-design/handoff.template.md` points to the canonical `.harness/templates/handoff.template.md` and the new rule document."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_handoff_rules.py",
+          "python3 .harness/tests/test_lint_harness.py"
+        ],
+        "checks": [
+          "handoff validation applies to `work/plans/active/<PLAN-ID>/handoff.md` and does not require archived handoff files to change."
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 94,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "handoff rule defines truth sources, required metadata, sections, and lifecycle transaction shape",
+          "lint-harness structurally validates active plan handoff without judging prose quality",
+          "handoff template and design note point to canonical rule and truth sources",
+          "focused and full verification passed"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-27/session-PLAN-002-TASK-001-review.md"
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-002",
+      "title": "Define session-start rules",
+      "planSection": "task-002-define-session-start-rules",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [
+        "TASK-001"
+      ],
+      "files": {
+        "create": [
+          ".harness/rules/session-start.md"
+        ],
+        "modify": [
+          ".harness/scripts/session-start.py",
+          ".harness/tests/test_session_start.py"
+        ],
+        "test": []
+      },
+      "acceptance": [
+        "`session-start.md` states the three allowed startup paths: validate existing state, bootstrap missing state with no active plan, and block missing state with active plan.",
+        "`session-start.md` states that existing `workflow-state.json` must not be modified by session start.",
+        "`session-start.md` defines the session audit file as evidence only, not workflow/task truth source.",
+        "`session-start.py` includes `handoff-rules.md` and `session-start.md` in `REQUIRED_ASSETS`.",
+        "`test_session_start.py` fails when either new rule document is missing from a fixture."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_session_start.py"
+        ],
+        "checks": [
+          "`python3 .harness/scripts/session-start.py --help` still exposes only session-start options and not lifecycle transition behavior."
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 93,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "session-start rule defines all startup paths",
+          "existing workflow-state remains read-only during session start",
+          "session audit is documented as evidence, not truth source",
+          "new rule assets are required by session-start preflight and covered by tests"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-27/session-PLAN-002-TASK-002-review.md"
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-003",
+      "title": "Wire entry docs and full contract",
+      "planSection": "task-003-wire-entry-docs-and-full-contract",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "harness-design/architecture.md",
+          "AGENTS.md",
+          "README.md",
+          "learning-notes/README.md"
+        ],
+        "test": [
+          ".harness/tests/test_session_start.py",
+          ".harness/tests/test_lint_harness.py"
+        ]
+      },
+      "acceptance": [
+        "`harness-design/architecture.md` lists `session-start.md` and `handoff-rules.md` as implemented rule documents, not planned-only items.",
+        "`AGENTS.md` reading order includes the new rule documents when working on session recovery, handoff, or lifecycle state.",
+        "`README.md` and `learning-notes/README.md` identify session audit and handoff as recovery evidence, not truth sources.",
+        "No documentation contradicts the existing `workflow-state.json` / `tasks.json` truth-source split.",
+        "Full Harness lint and state validation still pass."
+      ],
+      "verification": {
+        "commands": [
+          "python3 -m unittest discover -s .harness/tests -p 'test_*.py'",
+          "python3 .harness/scripts/lint-harness.py --root .",
+          "python3 .harness/scripts/validate-state.py --state work/workflow-state.json --schema .harness/schemas/workflow-state.schema.json"
+        ],
+        "checks": [
+          "documentation consistently names `.harness/rules/handoff-rules.md` and `.harness/rules/session-start.md`."
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 95,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "architecture lists handoff and session-start rules as implemented",
+          "AGENTS reading order includes the new rule documents for relevant lifecycle work",
+          "README and learning notes identify handoff and session audit as evidence, not truth sources",
+          "lifecycle docs no longer describe handoff rules as future work"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-27/session-PLAN-002-TASK-003-review.md"
+      },
+      "blockedReason": ""
+    }
+  ]
+}
