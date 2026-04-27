@@ -49,7 +49,7 @@ repo/
 │  │  └─ lint-harness.py        # 只读巡检目录结构与 Harness 全局不变量
 │  │
 │  │  # 规划中的 lifecycle 工具：
-│  │  # harness / check-env.py
+│  │  # check-env.py
 │
 │  └─ tests/                    # Harness 契约、脚本与模板的回归测试
 │     └─ test_*.py
@@ -144,7 +144,6 @@ repo/
 
 规划中的 lifecycle 工具：
 - **`check-env.py`**：校验依赖（`python`、`jsonschema`、`git` 等）。失败不阻塞，只把报告交给 Agent 决策。
-- **`lint-harness.py`**：目录结构与不变量巡检（如"`plans/active/` 下至多一个目录"）。
 
 ### `work/`
 - **`workflow-state.json`**：只承载运行态；详见 `workflow-state.schema.json` 与规则文档。

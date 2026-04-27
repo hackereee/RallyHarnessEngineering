@@ -138,15 +138,33 @@
       }
     },
     {
-      "$comment": "completed / archived 状态下不应有激活任务",
+      "$comment": "无 active plan 的 direct workflow 不应持有 activeTaskId",
+      "if": {
+        "properties": { "activePlanRef": { "const": null } },
+        "required": ["activePlanRef"]
+      },
+      "then": {
+        "properties": { "activeTaskId": { "const": null } }
+      }
+    },
+    {
+      "$comment": "completed / archived 状态下不应有激活 plan 或激活任务",
       "if": {
         "properties": {
           "workflowStatus": { "enum": ["completed", "archived"] }
         }
       },
       "then": {
-        "properties": { "activeTaskId": { "const": null } }
+        "properties": {
+          "activePlanRef": { "const": null },
+          "activeTaskId": { "const": null }
+        }
       }
+    },
+    {
+      "$comment": "completed 状态保留 L0/L1 最终 review gate 形态",
+      "if": { "properties": { "workflowStatus": { "const": "completed" } } },
+      "then": { "properties": { "currentPhase": { "const": "reviewing" } } }
     },
     {
       "$comment": "archived 状态下阶段只能为 archiving",

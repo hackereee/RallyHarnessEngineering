@@ -1,25 +1,9 @@
-# Handoff
+# Handoff Template Design Note
 
-- workflowId: workflow-harness-v1
-- planRef: ./plans/active/PLAN-001/plan.md
-- activeTaskId: TASK-003
-- sourceSessionId: session-2026-04-18-002
-- currentPhase: implementing
-- taskStatus: implementing
-- ownerRole: developer
+Canonical handoff templates live under `.harness/templates/`.
 
-## Current Status
-...
+- Runtime template: `.harness/templates/handoff.template.md`
+- Runtime owner: L2/L3 active plan package under `work/plans/active/<PLAN-ID>/handoff.md`
+- Truth sources: `work/workflow-state.json` and `work/plans/active/<PLAN-ID>/tasks.json`
 
-## Role Handoff
-
-- fromRole: planner
-- toRole: developer
-- reason: plan package has been materialized; next step is task activation
-- stateSource: workflow-state.json and tasks.json
-
-## Risks
-...
-
-## Next Action
-Draft tasks.template.json based on the finalized workflow-state rules
+Design copies must not invent a different state shape. After plan materialization and before lifecycle activation, `activeTaskId` is `null`, `currentPhase` is `planning`, `ownerRole` is `planner`, and all tasks in `tasks.json` remain `idle/developer`.
