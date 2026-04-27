@@ -37,7 +37,7 @@ If no agent entrypoint exists, report `NEEDS_ENTRYPOINT` and recommend creating 
 
 Harness framework architecture belongs at `.harness/ARCHITECTURE.md`.
 
-The target repository's root `ARCHITECTURE.md`, when present, remains business architecture. Do not paste the Harness framework architecture into root `ARCHITECTURE.md`. The entrypoint should reference both documents with separate meanings:
+The target repository's root `ARCHITECTURE.md` remains business architecture. The project init flow must ensure root `ARCHITECTURE.md` exists; if it is missing, create an empty root `ARCHITECTURE.md` so future task completion summaries can judge whether project architecture should be updated. Do not paste the Harness framework architecture into root `ARCHITECTURE.md`. The entrypoint should reference both documents with separate meanings:
 
 - root `ARCHITECTURE.md`: business architecture, modules, runtime topology, and project boundaries;
 - `.harness/ARCHITECTURE.md`: Harness framework architecture, lifecycle, schemas, scripts, rules, skills, and `work/` runtime layout.
@@ -56,7 +56,7 @@ Entrypoint changes must go through a deterministic managed block, not freeform r
 The managed block must tell future agents to read:
 
 1. the current agent entrypoint;
-2. root `ARCHITECTURE.md` if present;
+2. root `ARCHITECTURE.md`;
 3. `.harness/ARCHITECTURE.md`;
 4. `.harness/rules/workflow-lifecycle.md`;
 5. `.harness/contracts/`.
@@ -81,6 +81,7 @@ The delegated output is `.harness/contracts/project-contracts.json`. This skill 
 This skill may guide the Agent to:
 
 - choose or create an agent entrypoint;
+- create an empty root `ARCHITECTURE.md` when the real project does not have one;
 - install or verify `.harness/ARCHITECTURE.md`;
 - run the deterministic entrypoint updater;
 - create or update `.harness/contracts/project-entrypoints.json`;
@@ -100,6 +101,7 @@ This skill must not:
 Before claiming initialization is ready, verify:
 
 - an agent entrypoint exists or the user explicitly chose to create one;
+- root `ARCHITECTURE.md` exists, even if it is initially empty;
 - the managed block is present exactly once in the canonical entrypoint;
 - `.harness/ARCHITECTURE.md` exists and is referenced by the entrypoint;
 - `.harness/contracts/project-entrypoints.json` records the canonical entrypoint;

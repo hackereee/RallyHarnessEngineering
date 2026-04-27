@@ -29,6 +29,7 @@ repo/
 - `handoff.md` and session files are recovery and audit evidence, not truth sources.
 - Project-specific environment facts belong in `.harness/contracts/project-contracts.json`.
 - Project agent entrypoint facts belong in `.harness/contracts/project-entrypoints.json`.
+- Root `ARCHITECTURE.md` belongs to the target project's business architecture. Project initialization creates it as an empty file when missing so later task completion summaries have a stable place to update business architecture conclusions.
 
 ## Lifecycle
 

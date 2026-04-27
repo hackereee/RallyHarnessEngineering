@@ -9,6 +9,7 @@
     "$schema",
     "contractVersion",
     "canonicalEntry",
+    "projectArchitectureRef",
     "harnessArchitectureRef",
     "detectedEntries"
   ],
@@ -21,6 +22,10 @@
     "canonicalEntry": {
       "type": "string",
       "minLength": 1
+    },
+    "projectArchitectureRef": {
+      "type": "string",
+      "const": "ARCHITECTURE.md"
     },
     "harnessArchitectureRef": {
       "type": "string",

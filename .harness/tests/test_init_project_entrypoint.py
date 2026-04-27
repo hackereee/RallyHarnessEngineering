@@ -46,6 +46,7 @@ class InitProjectEntrypointTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             data = json.loads(result.stdout)
             self.assertEqual(data["canonicalEntry"], "AGENTS.md")
+            self.assertEqual(data["projectArchitectureRef"], "ARCHITECTURE.md")
             self.assertEqual(data["harnessArchitectureRef"], ".harness/ARCHITECTURE.md")
             self.assertEqual(
                 [entry["path"] for entry in data["detectedEntries"]],
@@ -86,13 +87,17 @@ class InitProjectEntrypointTest(unittest.TestCase):
             self.assertEqual(text.count("<!-- harness-engineering:start -->"), 1)
             self.assertEqual(text.count("<!-- harness-engineering:end -->"), 1)
             self.assertIn(".harness/ARCHITECTURE.md", text)
+            self.assertIn("ARCHITECTURE.md", text)
             self.assertIn("work/workflow-state.json", text)
 
             contract = json.loads(
                 (root / ".harness" / "contracts" / "project-entrypoints.json").read_text(encoding="utf-8")
             )
             self.assertEqual(contract["canonicalEntry"], "AGENTS.md")
+            self.assertEqual(contract["projectArchitectureRef"], "ARCHITECTURE.md")
             self.assertEqual(contract["detectedEntries"][0]["harnessBlock"], "present")
+            self.assertTrue((root / "ARCHITECTURE.md").exists())
+            self.assertEqual((root / "ARCHITECTURE.md").read_text(encoding="utf-8"), "")
 
     def test_create_entrypoint_writes_file_and_contract(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -102,8 +107,23 @@ class InitProjectEntrypointTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             self.assertTrue((root / "AGENTS.md").exists())
+            self.assertTrue((root / "ARCHITECTURE.md").exists())
             self.assertTrue((root / ".harness" / "contracts" / "project-entrypoints.json").exists())
             self.assertIn("CREATED AGENTS.md", result.stdout)
+
+    def test_write_preserves_existing_project_architecture(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "AGENTS.md").write_text("# Agents\n", encoding="utf-8")
+            (root / "ARCHITECTURE.md").write_text("# Project\n\nExisting architecture.\n", encoding="utf-8")
+
+            result = self.run_script(root, "--write", "--entry", "AGENTS.md")
+
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertEqual(
+                (root / "ARCHITECTURE.md").read_text(encoding="utf-8"),
+                "# Project\n\nExisting architecture.\n",
+            )
 
     def test_write_missing_entrypoint_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -2,6 +2,7 @@
   "$schema": "../schemas/project-entrypoints.schema.json",
   "contractVersion": "project-entrypoints-v1",
   "canonicalEntry": "AGENTS.md",
+  "projectArchitectureRef": "ARCHITECTURE.md",
   "harnessArchitectureRef": ".harness/ARCHITECTURE.md",
   "detectedEntries": [
     {

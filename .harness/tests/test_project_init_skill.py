@@ -51,6 +51,13 @@ class ProjectInitSkillTest(unittest.TestCase):
         self.assertIn("business architecture", text)
         self.assertIn("Harness framework architecture", text)
 
+    def test_requires_root_architecture_file_for_future_updates(self) -> None:
+        text = self.read_skill()
+
+        self.assertIn("ensure root `ARCHITECTURE.md` exists", text)
+        self.assertIn("create an empty root `ARCHITECTURE.md`", text)
+        self.assertIn("future task completion summaries", text)
+
     def test_delegates_environment_contract_to_project_env_contract(self) -> None:
         text = self.read_skill()
 

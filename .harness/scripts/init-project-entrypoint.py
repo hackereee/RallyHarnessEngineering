@@ -27,6 +27,7 @@ except ImportError:
 
 START_MARKER = "<!-- harness-engineering:start -->"
 END_MARKER = "<!-- harness-engineering:end -->"
+PROJECT_ARCHITECTURE_REF = "ARCHITECTURE.md"
 HARNESS_ARCHITECTURE_REF = ".harness/ARCHITECTURE.md"
 
 ENTRYPOINT_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -108,6 +109,7 @@ def contract_for(root: Path, explicit_entry: str | None = None) -> dict[str, Any
         "$schema": "../schemas/project-entrypoints.schema.json",
         "contractVersion": "project-entrypoints-v1",
         "canonicalEntry": canonical or "",
+        "projectArchitectureRef": PROJECT_ARCHITECTURE_REF,
         "harnessArchitectureRef": HARNESS_ARCHITECTURE_REF,
         "detectedEntries": entries,
     }
@@ -164,7 +166,7 @@ def managed_block() -> str:
         "This repository uses Harness Engineering for agent workflow control.\n\n"
         "Read order:\n"
         "1. This agent entry document.\n"
-        "2. Project architecture: `ARCHITECTURE.md` if present.\n"
+        "2. Project business architecture: `ARCHITECTURE.md`.\n"
         "3. Harness framework architecture: `.harness/ARCHITECTURE.md`.\n"
         "4. Harness lifecycle rules: `.harness/rules/workflow-lifecycle.md`.\n"
         "5. Harness project contracts: `.harness/contracts/`.\n\n"
@@ -192,6 +194,13 @@ def replace_managed_block(text: str) -> str:
     return block + "\n"
 
 
+def ensure_project_architecture(root: Path) -> None:
+    path = root / PROJECT_ARCHITECTURE_REF
+    if path.exists():
+        return
+    atomic_write_text(path, "")
+
+
 def write_entrypoint(root: Path, entry: str, *, create: bool) -> dict[str, Any]:
     path = root / entry
     if create:
@@ -204,6 +213,7 @@ def write_entrypoint(root: Path, entry: str, *, create: bool) -> dict[str, Any]:
         text = path.read_text(encoding="utf-8")
 
     atomic_write_text(path, replace_managed_block(text))
+    ensure_project_architecture(root)
 
     contract = contract_for(root, entry)
     for detected in contract["detectedEntries"]:

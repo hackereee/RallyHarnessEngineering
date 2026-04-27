@@ -38,6 +38,7 @@ class ProjectEntrypointsSchemaTest(unittest.TestCase):
 
         self.assertEqual(template["contractVersion"], "project-entrypoints-v1")
         self.assertEqual(template["canonicalEntry"], "AGENTS.md")
+        self.assertEqual(template["projectArchitectureRef"], "ARCHITECTURE.md")
         self.assertEqual(template["harnessArchitectureRef"], ".harness/ARCHITECTURE.md")
         self.assertGreaterEqual(len(template["detectedEntries"]), 1)
 
@@ -65,6 +66,14 @@ class ProjectEntrypointsSchemaTest(unittest.TestCase):
         errors = self.validate(data)
 
         self.assertTrue(any("harnessArchitectureRef" in error for error in errors), errors)
+
+    def test_project_architecture_ref_is_stable(self) -> None:
+        data = self.load_template()
+        data["projectArchitectureRef"] = "docs/ARCHITECTURE.md"
+
+        errors = self.validate(data)
+
+        self.assertTrue(any("projectArchitectureRef" in error for error in errors), errors)
 
 
 if __name__ == "__main__":
