@@ -1,0 +1,173 @@
+{
+  "$schema": "../../../../.harness/schemas/tasks.schema.json",
+  "planId": "PLAN-007",
+  "planRef": "./plan.md",
+  "tasks": [
+    {
+      "taskId": "TASK-001",
+      "title": "Rename project environment contract skill",
+      "planSection": "task-001-rename-project-env-contract-skill",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [],
+      "files": {
+        "create": [
+          ".harness/skills/project-env-contract/SKILL.md",
+          ".harness/tests/test_project_env_contract_skill.py"
+        ],
+        "modify": [
+          ".harness/skills/project-init/SKILL.md",
+          ".harness/scripts/session-start.py",
+          ".harness/tests/test_session_start.py",
+          ".harness/tests/test_project_init_skill.py",
+          "harness-design/architecture.md"
+        ],
+        "test": []
+      },
+      "acceptance": [
+        "Existing project environment contract requirements are tested under `project-env-contract`.",
+        "`session-start.py` requires `.harness/skills/project-env-contract/SKILL.md`.",
+        "The old environment contract skill content is no longer named `project-init`.",
+        "Architecture docs distinguish the environment contract skill from the new top-level project init skill."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_project_env_contract_skill.py",
+          "python3 .harness/tests/test_session_start.py"
+        ],
+        "checks": [
+          "rg -n \"project-env-contract|project-init\" .harness/skills .harness/tests .harness/scripts/session-start.py harness-design/architecture.md"
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 92,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "verification evidence is present",
+          "skill rename references are synchronized",
+          "lifecycle invariants hold"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-27/session-PLAN-007-TASK-001-review.md"
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-002",
+      "title": "Add project entrypoint contract and deterministic updater",
+      "planSection": "task-002-add-entrypoint-contract-and-script",
+      "status": "implementing",
+      "currentStep": "Activated by lifecycle transaction",
+      "nextAction": "执行 TASK-002",
+      "ownerRole": "developer",
+      "dependsOn": [
+        "TASK-001"
+      ],
+      "files": {
+        "create": [
+          ".harness/schemas/project-entrypoints.schema.json",
+          ".harness/templates/project-entrypoints.template.json",
+          ".harness/scripts/init-project-entrypoint.py"
+        ],
+        "modify": [
+          ".harness/scripts/harness",
+          ".harness/scripts/session-start.py"
+        ],
+        "test": [
+          ".harness/tests/test_project_entrypoints_schema.py",
+          ".harness/tests/test_init_project_entrypoint.py",
+          ".harness/tests/test_harness_cli.py",
+          ".harness/tests/test_session_start.py"
+        ]
+      },
+      "acceptance": [
+        "The template validates against the new schema.",
+        "Detect mode reports existing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and known tool-specific rule files.",
+        "Missing entrypoints return `NEEDS_ENTRYPOINT`.",
+        "Write mode creates or updates only the `harness-engineering` managed block.",
+        "The script writes `.harness/contracts/project-entrypoints.json` with canonical entry, detected entries, and `.harness/ARCHITECTURE.md` reference.",
+        "The unified CLI exposes `init-entrypoint`."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_project_entrypoints_schema.py",
+          "python3 .harness/tests/test_init_project_entrypoint.py",
+          "python3 .harness/tests/test_harness_cli.py",
+          "python3 .harness/tests/test_session_start.py"
+        ],
+        "checks": [],
+        "lastResult": "not_run"
+      },
+      "review": {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": ""
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-003",
+      "title": "Add top-level project init skill and Harness architecture doc",
+      "planSection": "task-003-add-top-level-project-init-skill-and-docs",
+      "status": "idle",
+      "currentStep": "",
+      "nextAction": "",
+      "ownerRole": "developer",
+      "dependsOn": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "files": {
+        "create": [
+          ".harness/skills/project-init/SKILL.md",
+          ".harness/ARCHITECTURE.md"
+        ],
+        "modify": [
+          "harness-design/architecture.md"
+        ],
+        "test": [
+          ".harness/tests/test_project_init_skill.py",
+          ".harness/tests/test_session_start.py"
+        ]
+      },
+      "acceptance": [
+        "New `project-init` skill checks for agent entrypoints before writing references.",
+        "It recommends creating `AGENTS.md` when no agent entrypoint exists unless the user chooses another entrypoint.",
+        "It requires `.harness/ARCHITECTURE.md` as the stable Harness framework architecture reference.",
+        "It delegates project environment contract derivation to `project-env-contract`.",
+        "Architecture docs explain that root `ARCHITECTURE.md` is business architecture while `.harness/ARCHITECTURE.md` is framework architecture."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_project_init_skill.py",
+          "python3 .harness/tests/test_session_start.py",
+          "python3 -m unittest discover -s .harness/tests -p 'test_*.py'",
+          "python3 .harness/scripts/lint-harness.py --root .",
+          "python3 .harness/scripts/validate-state.py --state work/workflow-state.json --schema .harness/schemas/workflow-state.schema.json"
+        ],
+        "checks": [],
+        "lastResult": "not_run"
+      },
+      "review": {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": ""
+      },
+      "blockedReason": ""
+    }
+  ]
+}

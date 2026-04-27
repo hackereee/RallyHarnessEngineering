@@ -1,101 +1,107 @@
 ---
 name: project-init
-description: Use when initializing Harness in a target development repository and deriving project-specific environment contracts.
+description: Use when initializing Harness in a real project by detecting agent entrypoints, installing Harness architecture references, and delegating environment contracts.
 ---
 
 # Project Init
 
 ## Overview
 
-Initialize Harness for a real project by deriving project-specific contracts from repository evidence. This skill creates the semantic bridge between generic Harness assets and the target repository's build, test, runtime, and operational expectations.
+Initialize Harness in a real project. This top-level skill connects the target repository's agent entrypoint to the stable Harness framework architecture and then delegates project environment contract derivation to `project-env-contract`.
 
-The primary output is `.harness/contracts/project-contracts.json`, validated by `.harness/schemas/project-contracts.schema.json`. `project-contracts.json may be absent until project-init configures it`; in that state, `check-project-env.py` reports `NOT_CONFIGURED` instead of treating the Harness core as broken. Contracts are the truth source; `.harness/scripts/check-project-env.py` only executes declared checks. Do not turn project-specific environment knowledge into ad hoc `session-start.py` checks.
+This skill is about onboarding and coordination. It must not replace deterministic scripts, write workflow runtime state directly, or turn project-specific environment checks into Harness core startup checks.
 
-## Repository Evidence First
+## Entrypoint Detection
 
-Read repository evidence before asking user questions.
+Inspect repository evidence before writing references. Detect agent entrypoint candidates in this order:
 
-Use the target repository to identify:
+1. Canonical generic entrypoint:
+   - `AGENTS.md`
+2. Tool-specific entrypoints:
+   - `CLAUDE.md`
+   - `GEMINI.md`
+   - `.github/copilot-instructions.md`
+3. Editor or agent rule files:
+   - `.cursor/rules/*.mdc`
+   - `.cursorrules`
+   - `.windsurfrules`
+   - `.windsurf/rules/*.md`
+   - `.clinerules`
+   - `.roo/rules/*.md`
 
-- entry instructions such as `AGENTS.md`, `README.md`, or local architecture notes;
-- package manifests, lockfiles, build files, CI definitions, and test runners;
-- existing scripts for lint, build, test, code generation, migration, and local services;
-- language, framework, platform, database, service, emulator, simulator, and secret requirements;
-- current Harness assets, active `work/` state, and any existing project contracts.
+If `AGENTS.md` exists, use it as the canonical entrypoint. If multiple tool-specific entrypoints exist without `AGENTS.md`, report the candidates and recommend creating `AGENTS.md` as the canonical entrypoint unless the user explicitly chooses another entrypoint.
 
-Do not ask the user to restate information that is discoverable from repository files. If evidence conflicts, name the files and state the conflict before proposing a contract.
+If no agent entrypoint exists, report `NEEDS_ENTRYPOINT` and recommend creating `AGENTS.md` unless the user explicitly chooses another entrypoint. Do not silently write to `README.md`, `CONTRIBUTING.md`, or root `ARCHITECTURE.md`; those are human-facing fallback evidence, not agent entrypoints by default.
 
-## Blocking Questions
+## Architecture Reference
 
-Ask only questions that block a verifiable contract.
+Harness framework architecture belongs at `.harness/ARCHITECTURE.md`.
 
-A blocking question must name:
+The target repository's root `ARCHITECTURE.md`, when present, remains business architecture. Do not paste the Harness framework architecture into root `ARCHITECTURE.md`. The entrypoint should reference both documents with separate meanings:
 
-- the missing decision;
-- the contract field or check it affects;
-- the risk of choosing without confirmation;
-- the proposed default if one is safe.
+- root `ARCHITECTURE.md`: business architecture, modules, runtime topology, and project boundaries;
+- `.harness/ARCHITECTURE.md`: Harness framework architecture, lifecycle, schemas, scripts, rules, skills, and `work/` runtime layout.
 
-Do not ask broad preference questions before reading evidence. If uncertainty is non-blocking, record it as a warning or follow-up rather than stopping initialization.
+If `.harness/ARCHITECTURE.md` is missing, install it from the Harness framework assets before inserting entrypoint references.
 
-## Core Checks vs Project Checks
+## Managed Block Update
 
-Harness core checks protect the Harness system itself: schemas, templates, rules, scripts, required repo-local skills, active plan shape, workflow state shape, and lifecycle invariants.
+Entrypoint changes must go through a deterministic managed block, not freeform rewriting. The block markers are:
 
-Project environment checks protect the target project: toolchain versions, dependency installation, build commands, test commands, local services, credentials, device targets, generated files, and deploy or packaging prerequisites.
+```md
+<!-- harness-engineering:start -->
+<!-- harness-engineering:end -->
+```
 
-Keep this boundary explicit:
+The managed block must tell future agents to read:
 
-- Do not add project-specific checks to `session-start.py`.
-- Do not put project runtime facts into Harness core schemas unless they are generic Harness contract fields.
-- Do not write `workflow-state.json` directly.
-- Use `state-write.py` for workflow state and `update-task.py` for task execution state.
+1. the current agent entrypoint;
+2. root `ARCHITECTURE.md` if present;
+3. `.harness/ARCHITECTURE.md`;
+4. `.harness/rules/workflow-lifecycle.md`;
+5. `.harness/contracts/`.
 
-## Required Project Contracts
+It must also name the truth sources:
 
-Prefer declarative contracts that deterministic scripts can validate later. A complete initialization should write or revise `.harness/contracts/project-contracts.json` with these concepts before any custom checker exists:
+- workflow runtime: `work/workflow-state.json`;
+- task runtime: `work/plans/active/<PLAN-ID>/tasks.json`;
+- project environment contract: `.harness/contracts/project-contracts.json`;
+- project entrypoint contract: `.harness/contracts/project-entrypoints.json`.
 
-- project profile: project type, language, framework, package manager, runtime targets, and source roots;
-- environment checks: required tools, versions, services, secrets, ports, device targets, generated assets, and network assumptions;
-- command registry: canonical commands for install, lint, build, unit test, integration test, smoke test, code generation, migration, and cleanup;
-- severity model: each check is either blocking or warning, with clear remediation guidance;
-- evidence source: every inferred contract links back to repository files or an explicit user answer.
+Do not modify content outside the managed block. If a managed block already exists, replace that block only.
 
-Each environment check should have a stable id, description, evidence source, command reference or deterministic probe, expected result, severity, and remediation. Use `python3 .harness/scripts/check-project-env.py --root . --contract .harness/contracts/project-contracts.json` to execute the declared checks after the contract exists.
+## Environment Contract Delegation
 
-## Contracts Before Scripts
+After the entrypoint and Harness architecture reference are configured, delegate project environment contract derivation to `project-env-contract`.
 
-Write project contracts before custom scripts or adapters.
-
-Only introduce a custom checker when a contract is already stated and cannot be validated with an existing generic script or command registry entry. When that happens, describe the adapter fallback explicitly:
-
-- which contract field cannot be checked declaratively;
-- why an adapter is necessary;
-- what input and output shape the adapter must use;
-- how failures map to blocking or warning severity.
-
-Adapters must consume contracts. They must not invent requirements that are absent from the project profile, environment checks, or command registry. `check-project-env` may call adapters only as a fallback for contract-declared checks; adapters are never the truth source.
+The delegated output is `.harness/contracts/project-contracts.json`. This skill may verify that the file exists or report that it remains `NOT_CONFIGURED`, but it must not duplicate the `project-env-contract` rules such as project profile extraction, command registry construction, environment check severity mapping, or adapter fallback policy.
 
 ## Output Boundary
 
-This skill may guide the Agent to create or revise `.harness/contracts/project-contracts.json`. `project-contracts.json may be absent until project-init configures it`; that missing-file state is `NOT_CONFIGURED`, not a reason to add project-specific checks to `session-start.py`. If a target repository needs a different contract location, propose it explicitly and explain why it belongs outside `session-start.py`.
+This skill may guide the Agent to:
+
+- choose or create an agent entrypoint;
+- install or verify `.harness/ARCHITECTURE.md`;
+- run the deterministic entrypoint updater;
+- create or update `.harness/contracts/project-entrypoints.json`;
+- invoke `project-env-contract` for `.harness/contracts/project-contracts.json`.
 
 This skill must not:
 
-- activate tasks;
-- change workflow phase;
 - write `workflow-state.json` directly;
-- mark tasks as tested, reviewed, or done;
-- add project-specific environment checks to `session-start.py`;
-- replace deterministic validation scripts with LLM judgment.
+- write `tasks.json` directly;
+- activate tasks or change workflow phase;
+- add project-specific checks to `session-start.py`;
+- rewrite root `ARCHITECTURE.md` with Harness framework architecture;
+- mutate user entrypoint prose outside the managed block.
 
 ## Validation
 
 Before claiming initialization is ready, verify:
 
-- repository evidence was reviewed before user questions;
-- project profile, environment checks, command registry, severity, and remediation are represented;
-- blocking and warning severities are distinguishable;
-- adapter fallback is documented only after contracts exist;
-- Harness core checks remain separate from project environment checks;
-- `session-start.py` still validates Harness startup only.
+- an agent entrypoint exists or the user explicitly chose to create one;
+- the managed block is present exactly once in the canonical entrypoint;
+- `.harness/ARCHITECTURE.md` exists and is referenced by the entrypoint;
+- `.harness/contracts/project-entrypoints.json` records the canonical entrypoint;
+- `project-env-contract` has either produced `.harness/contracts/project-contracts.json` or intentionally remains `NOT_CONFIGURED`;
+- Harness core checks remain separate from project environment checks.

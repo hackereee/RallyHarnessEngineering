@@ -4,9 +4,11 @@
 repo/
 ├─ AGENTS.md                    # Agent 入口：Harness 的事实来源与导航
 ├─ README.md                    # 人类入口：项目概览、安装、使用
-├─ ARCHITECTURE.md              # 可选：项目级架构说明（可并入 AGENTS.md）
+├─ ARCHITECTURE.md              # 可选：真实项目业务架构，不承载 Harness 框架架构
 │
 ├─ .harness/                    # Harness 脚手架：不变资产，跟随 repo 版本化
+│  ├─ ARCHITECTURE.md           # Harness 框架架构，供真实项目 agent 入口引用
+│  │
 │  ├─ schemas/                  # 机器可校验契约（JSON Schema 2020-12）
 │  │  ├─ workflow-state.schema.json
 │  │  ├─ tasks.schema.json
@@ -22,9 +24,9 @@ repo/
 │  │  ├─ handoff.template.md
 │  │  └─ closure.template.md
 │  │
-│  ├─ contracts/                # 项目级契约目录；project-init 前可为空
+│  ├─ contracts/                # 项目级契约目录；project-env-contract 前可为空
 │  │  ├─ .gitkeep
-│  │  └─ project-contracts.json # 由 project-init 生成，供通用 runner 执行
+│  │  └─ project-contracts.json # 由 project-env-contract 生成，供通用 runner 执行
 │  │
 │  ├─ rules/                    # 人读规则文档：schema 无法表达的语义约定
 │  │  ├─ workflow-lifecycle.md
@@ -35,7 +37,9 @@ repo/
 │  │
 │  ├─ skills/                   # Agent 工作流技能：指导 Harness 工件生产与维护
 │  │  ├─ project-init/
-│  │  │  └─ SKILL.md           # 初始化目标项目的 repo-local skill，生成项目环境契约
+│  │  │  └─ SKILL.md           # 初始化目标项目接入 Harness 的顶层 repo-local skill
+│  │  ├─ project-env-contract/
+│  │  │  └─ SKILL.md           # 生成项目环境契约的 repo-local skill
 │  │  ├─ plan-writing/
 │  │  │  └─ SKILL.md           # 生成 L2/L3 active plan package 的 repo-local skill
 │  │  └─ task-review/
@@ -112,7 +116,8 @@ repo/
 ### 入口层
 - **`AGENTS.md`**：Harness 的唯一入口与事实来源；Agent 启动时先读它，再按链接跳转。
 - **`README.md`**：面向人类，项目概览、安装指南、使用说明。
-- **`ARCHITECTURE.md`**：架构总览（即本文）；若内容较短可并入 `AGENTS.md`。
+- **root `ARCHITECTURE.md`**：真实项目业务架构，描述业务模块、依赖、数据流、运行拓扑和项目边界；不承载 Harness 框架架构。
+- **`.harness/ARCHITECTURE.md`**：Harness framework architecture 的稳定引用位置，真实项目的 agent 入口通过 managed block 引用它。
 
 ### `.harness/schemas/`
 机器可校验契约。所有 schema 遵循 Draft 2020-12。
@@ -125,7 +130,7 @@ repo/
 初始化样例。JSON 模板顶部用 `$schema` 相对路径指向 `.harness/schemas/`，保证 IDE 可即时校验与补全；Markdown 模板提供结构化正文形态，由对应 skill 与脚本约束。
 
 ### `.harness/contracts/`
-项目级契约目录。目录本身随 Harness 版本化，`project-contracts.json may be absent until project-init configures it`；缺失时 `.harness/scripts/check-project-env.py` 返回 `NOT_CONFIGURED`，表示项目环境契约尚未初始化，而不是 Harness 核心损坏。`project-init` 的默认输出是 `.harness/contracts/project-contracts.json`，它是 project environment checks 的 truth source。`.harness/scripts/check-project-env.py` 只能读取该契约并执行其中声明的 command 或 probe；它不得从仓库自由推断项目事实，也不得替代 `session-start.py`。
+项目级契约目录。目录本身随 Harness 版本化，`project-contracts.json may be absent until project-env-contract configures it`；缺失时 `.harness/scripts/check-project-env.py` 返回 `NOT_CONFIGURED`，表示项目环境契约尚未初始化，而不是 Harness 核心损坏。`project-env-contract` 的默认输出是 `.harness/contracts/project-contracts.json`，它是 project environment checks 的 truth source。`.harness/scripts/check-project-env.py` 只能读取该契约并执行其中声明的 command 或 probe；它不得从仓库自由推断项目事实，也不得替代 `session-start.py`。
 
 ### `.harness/rules/`
 只写 schema 无法表达的语义约定，例如"`nextAction` 必须是单句原子动作"、"阶段流转需要哪些工件与脚本网关"。避免与 schema 重复。
@@ -138,7 +143,8 @@ repo/
 
 `.harness/skills/` 中的 skill 默认是 **repo-local skill**，服务于当前 Harness 工件体系；它可以借鉴通用 Agent skill 格式，但不承诺脱离 `.harness/` 的 schema、template、rules、scripts 独立运行。若未来需要跨仓库复用，应先抽象依赖契约，再迁移为可安装的通用 skill。
 
-- **`.harness/skills/project-init/SKILL.md`**：初始化 Harness 到目标开发仓库时使用的语义 skill；指导 Agent 先读取仓库证据，再生成 `.harness/contracts/project-contracts.json`，其中包含 project profile、environment checks 与 command registry。project environment differences belong in project contracts, not in `session-start.py`；`session-start.py` 只校验 Harness 启动所需的核心资产与运行态形态。
+- **`.harness/skills/project-init/SKILL.md`**：初始化 Harness 到目标开发仓库时使用的顶层语义 skill；负责入口文档发现、Harness 架构引用落位和子流程编排，不直接替代确定性脚本。
+- **`.harness/skills/project-env-contract/SKILL.md`**：生成项目环境契约的语义 skill；指导 Agent 先读取仓库证据，再生成 `.harness/contracts/project-contracts.json`，其中包含 project profile、environment checks 与 command registry。project environment differences belong in project contracts, not in `session-start.py`；`session-start.py` 只校验 Harness 启动所需的核心资产与运行态形态。
 - **`plan-writing/SKILL.md`**：将需求、backlog item 或已确认设计转成 L2/L3 active plan package；先完成 planning-time `Plan Review Gate` 并在 `plan.md` 记录 `Status: passed`，再使用 `materialize-tasks.py` 生成 `tasks.json`，但不激活 task、不写 `workflow-state.json`。
 - **`task-review/SKILL.md`**：根据实现、plan/task acceptance、验证证据和 diff 生成结构化 review 摘要；输出给 `update-task.py` 使用，不直接写 `tasks.json` 或 `workflow-state.json`。
 

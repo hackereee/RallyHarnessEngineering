@@ -9,7 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SKILL = REPO_ROOT / ".harness" / "skills" / "project-init" / "SKILL.md"
 ARCHITECTURE = REPO_ROOT / "harness-design" / "architecture.md"
-CONTRACTS_DIR = REPO_ROOT / ".harness" / "contracts"
+HARNESS_ARCHITECTURE = REPO_ROOT / ".harness" / "ARCHITECTURE.md"
 
 
 class ProjectInitSkillTest(unittest.TestCase):
@@ -22,63 +22,57 @@ class ProjectInitSkillTest(unittest.TestCase):
         self.assertTrue(text.startswith("---\n"))
         self.assertIn("name: project-init", text)
         self.assertIn("description:", text)
-        self.assertIn("initializing Harness", text)
-        self.assertIn("target development repository", text)
+        self.assertIn("real project", text)
+        self.assertIn("agent entrypoint", text)
 
-    def test_requires_repository_evidence_before_questions(self) -> None:
+    def test_detects_agent_entrypoints_before_writing_references(self) -> None:
         text = self.read_skill()
 
-        evidence_index = text.index("## Repository Evidence First")
-        questions_index = text.index("## Blocking Questions")
-        self.assertLess(evidence_index, questions_index)
-        self.assertIn("Read repository evidence before asking user questions.", text)
-        self.assertIn("Ask only questions that block a verifiable contract.", text)
+        detect_index = text.index("## Entrypoint Detection")
+        write_index = text.index("## Managed Block Update")
+        self.assertLess(detect_index, write_index)
+        self.assertIn("AGENTS.md", text)
+        self.assertIn("CLAUDE.md", text)
+        self.assertIn("GEMINI.md", text)
+        self.assertIn(".github/copilot-instructions.md", text)
 
-    def test_separates_harness_core_from_project_environment(self) -> None:
+    def test_recommends_agents_md_when_no_entrypoint_exists(self) -> None:
         text = self.read_skill()
 
-        self.assertIn("Harness core checks", text)
-        self.assertIn("project environment checks", text)
-        self.assertIn("Do not add project-specific checks to `session-start.py`.", text)
-        self.assertIn("Do not write `workflow-state.json` directly.", text)
+        self.assertIn("NEEDS_ENTRYPOINT", text)
+        self.assertIn("recommend creating `AGENTS.md`", text)
+        self.assertIn("unless the user explicitly chooses another entrypoint", text)
 
-    def test_requires_contracts_before_scripts_or_adapters(self) -> None:
+    def test_uses_stable_harness_architecture_reference(self) -> None:
         text = self.read_skill()
-        lowered = text.lower()
 
-        self.assertIn("project profile", lowered)
-        self.assertIn("environment checks", lowered)
-        self.assertIn("command registry", lowered)
-        self.assertIn("blocking", lowered)
-        self.assertIn("warning", lowered)
-        self.assertIn("adapter fallback", lowered)
-        self.assertIn("Write project contracts before custom scripts or adapters.", text)
+        self.assertIn(".harness/ARCHITECTURE.md", text)
+        self.assertIn("root `ARCHITECTURE.md`", text)
+        self.assertIn("business architecture", text)
+        self.assertIn("Harness framework architecture", text)
+
+    def test_delegates_environment_contract_to_project_env_contract(self) -> None:
+        text = self.read_skill()
+
+        self.assertIn("project-env-contract", text)
         self.assertIn(".harness/contracts/project-contracts.json", text)
-        self.assertIn("check-project-env", text)
-        self.assertIn("contracts are the truth source", lowered)
+        self.assertNotIn("Write project contracts before custom scripts or adapters.", text)
 
     def test_architecture_documents_project_init_skill_boundary(self) -> None:
         text = ARCHITECTURE.read_text(encoding="utf-8")
 
         self.assertIn(".harness/skills/project-init/SKILL.md", text)
-        self.assertIn(".harness/schemas/project-contracts.schema.json", text)
-        self.assertIn(".harness/scripts/check-project-env.py", text)
-        self.assertIn("project environment differences belong in project contracts", text)
-        self.assertIn("not in `session-start.py`", text)
-        self.assertIn("`.harness/` 只写契约、模板、规则、技能与工具", text)
+        self.assertIn(".harness/skills/project-env-contract/SKILL.md", text)
+        self.assertIn(".harness/ARCHITECTURE.md", text)
+        self.assertIn("root `ARCHITECTURE.md`", text)
+        self.assertIn("业务架构", text)
 
-    def test_contracts_directory_exists_without_requiring_configured_contract(self) -> None:
-        self.assertTrue(CONTRACTS_DIR.is_dir())
-        self.assertFalse((CONTRACTS_DIR / "project-contracts.json").exists())
+    def test_harness_architecture_doc_exists(self) -> None:
+        text = HARNESS_ARCHITECTURE.read_text(encoding="utf-8")
 
-    def test_docs_state_project_contract_can_be_not_configured(self) -> None:
-        architecture = ARCHITECTURE.read_text(encoding="utf-8")
-        skill = self.read_skill()
-
-        self.assertIn("project-contracts.json may be absent until project-init configures it", architecture)
-        self.assertIn("NOT_CONFIGURED", architecture)
-        self.assertIn("project-contracts.json may be absent until project-init configures it", skill)
-        self.assertIn("NOT_CONFIGURED", skill)
+        self.assertIn("# Harness Framework Architecture", text)
+        self.assertIn(".harness/", text)
+        self.assertIn("work/", text)
 
 
 if __name__ == "__main__":

@@ -107,6 +107,7 @@ class SessionStartTest(unittest.TestCase):
             ".harness/rules/handoff-rules.md",
             ".harness/rules/session-start.md",
             ".harness/skills/project-init/SKILL.md",
+            ".harness/skills/project-env-contract/SKILL.md",
             ".harness/scripts/lint-harness.py",
             ".harness/scripts/validate-state.py",
             ".harness/scripts/state-write.py",
@@ -275,6 +276,18 @@ class SessionStartTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
             self.assertIn(".harness/skills/project-init/SKILL.md", result.stderr + result.stdout)
+            self.assertFalse((root / "work" / "workflow-state.json").exists())
+
+    def test_missing_project_env_contract_skill_asset_is_blocked_by_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+            (root / ".harness" / "skills" / "project-env-contract" / "SKILL.md").unlink()
+
+            result = self.run_session_start(root)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn(".harness/skills/project-env-contract/SKILL.md", result.stderr + result.stdout)
             self.assertFalse((root / "work" / "workflow-state.json").exists())
 
     def test_missing_project_contract_runner_assets_are_blocked_by_preflight(self) -> None:

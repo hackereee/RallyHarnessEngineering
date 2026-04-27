@@ -43,6 +43,7 @@ REQUIRED_ASSETS = (
     ".harness/rules/handoff-rules.md",
     ".harness/rules/session-start.md",
     ".harness/skills/project-init/SKILL.md",
+    ".harness/skills/project-env-contract/SKILL.md",
     ".harness/scripts/validate-state.py",
     ".harness/scripts/lint-harness.py",
     ".harness/scripts/state-write.py",
