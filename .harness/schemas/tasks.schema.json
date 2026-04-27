@@ -38,6 +38,153 @@
       },
       "uniqueItems": true
     },
+    "reviewFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "blocking", "summary"],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "important", "minor"]
+        },
+        "blocking": { "type": "boolean" },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "artifactRef": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "recommendation": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "deferReason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "critical finding 一律阻断",
+          "if": {
+            "properties": { "severity": { "const": "critical" } },
+            "required": ["severity"]
+          },
+          "then": {
+            "properties": {
+              "blocking": { "const": true }
+            }
+          }
+        },
+        {
+          "$comment": "important finding 若不阻断，必须说明延期原因",
+          "if": {
+            "properties": {
+              "severity": { "const": "important" },
+              "blocking": { "const": false }
+            },
+            "required": ["severity", "blocking"]
+          },
+          "then": {
+            "required": ["deferReason"]
+          }
+        }
+      ]
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "threshold",
+        "lastResult",
+        "rubricVersion",
+        "checks",
+        "findings",
+        "reportRef"
+      ],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "threshold": {
+          "type": "integer",
+          "const": 85
+        },
+        "lastResult": {
+          "type": "string",
+          "enum": ["not_run", "passed", "failed"]
+        },
+        "rubricVersion": {
+          "type": "string",
+          "pattern": "^review-rubric-v[0-9]+$"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "findings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reviewFinding" }
+        },
+        "reportRef": {
+          "type": "string",
+          "maxLength": 240
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "passed review 必须达到 v1 阈值、至少有检查项、且不存在阻断发现",
+          "if": {
+            "properties": { "lastResult": { "const": "passed" } },
+            "required": ["lastResult"]
+          },
+          "then": {
+            "properties": {
+              "score": { "minimum": 85 },
+              "checks": { "minItems": 1 },
+              "findings": {
+                "allOf": [
+                  {
+                    "not": {
+                      "contains": {
+                        "type": "object",
+                        "properties": {
+                          "severity": { "const": "critical" }
+                        },
+                        "required": ["severity"]
+                      }
+                    }
+                  },
+                  {
+                    "not": {
+                      "contains": {
+                        "type": "object",
+                        "properties": {
+                          "severity": { "const": "important" },
+                          "blocking": { "const": true }
+                        },
+                        "required": ["severity", "blocking"]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
     "task": {
       "type": "object",
       "additionalProperties": false,
@@ -53,6 +200,7 @@
         "files",
         "acceptance",
         "verification",
+        "review",
         "blockedReason"
       ],
       "properties": {
@@ -134,6 +282,7 @@
             }
           }
         },
+        "review": { "$ref": "#/$defs/review" },
         "blockedReason": {
           "type": "string",
           "maxLength": 500
@@ -189,7 +338,7 @@
           }
         },
         {
-          "$comment": "done task 必须有完成标准、验证依据，且最近验证通过",
+          "$comment": "done task 必须有完成标准、验证依据，且最近验证和评审均通过",
           "if": {
             "properties": { "status": { "const": "done" } },
             "required": ["status"]
@@ -213,6 +362,11 @@
                     }
                   }
                 ]
+              },
+              "review": {
+                "properties": {
+                  "lastResult": { "const": "passed" }
+                }
               }
             }
           }

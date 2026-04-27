@@ -32,6 +32,31 @@ class TasksSchemaTest(unittest.TestCase):
         errors = list(Draft202012Validator(self.schema).iter_errors(data))
         self.assertNotEqual(errors, [])
 
+    def done_task_manifest(self, review: dict | None = None) -> dict:
+        data = copy.deepcopy(self.template)
+        task = data["tasks"][0]
+        task["status"] = "done"
+        task["ownerRole"] = "developer"
+        task["acceptance"] = ["Review gate acceptance is met"]
+        task["verification"]["lastResult"] = "passed"
+        task["verification"]["checks"] = ["Verification evidence exists"]
+        if review is None:
+            task.pop("review", None)
+        else:
+            task["review"] = review
+        return data
+
+    def passing_review(self) -> dict:
+        return {
+            "score": 90,
+            "threshold": 85,
+            "lastResult": "passed",
+            "rubricVersion": "review-rubric-v1",
+            "checks": ["schema sync checked"],
+            "findings": [],
+            "reportRef": "work/sessions/2026-04-27/session-review.md",
+        }
+
     def test_template_matches_schema(self) -> None:
         self.assert_valid(self.template)
 
@@ -52,6 +77,44 @@ class TasksSchemaTest(unittest.TestCase):
         task["ownerRole"] = "tester"
 
         self.assert_invalid(data)
+
+    def test_done_task_requires_passing_review_gate(self) -> None:
+        self.assert_valid(self.done_task_manifest(self.passing_review()))
+
+        critical_finding = {
+            "severity": "critical",
+            "blocking": True,
+            "summary": "Task bypasses a Harness invariant",
+        }
+        blocking_important_finding = {
+            "severity": "important",
+            "blocking": True,
+            "summary": "Task leaves required lifecycle tests uncovered",
+        }
+
+        invalid_cases = [
+            ("missing review", self.done_task_manifest()),
+            (
+                "review not passed",
+                self.done_task_manifest({**self.passing_review(), "lastResult": "failed"}),
+            ),
+            (
+                "score below threshold",
+                self.done_task_manifest({**self.passing_review(), "score": 84}),
+            ),
+            (
+                "critical finding",
+                self.done_task_manifest({**self.passing_review(), "findings": [critical_finding]}),
+            ),
+            (
+                "blocking important finding",
+                self.done_task_manifest({**self.passing_review(), "findings": [blocking_important_finding]}),
+            ),
+        ]
+
+        for label, data in invalid_cases:
+            with self.subTest(label=label):
+                self.assert_invalid(data)
 
 
 if __name__ == "__main__":

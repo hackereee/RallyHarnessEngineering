@@ -103,7 +103,18 @@ class MaterializeTasksTest(unittest.TestCase):
             self.assertEqual(data["tasks"][0]["currentStep"], "")
             self.assertEqual(data["tasks"][0]["nextAction"], "")
             self.assertEqual(data["tasks"][0]["verification"]["lastResult"], "not_run")
-            self.assertNotIn("review", data["tasks"][0])
+            self.assertEqual(
+                data["tasks"][0]["review"],
+                {
+                    "score": 0,
+                    "threshold": 85,
+                    "lastResult": "not_run",
+                    "rubricVersion": "review-rubric-v1",
+                    "checks": [],
+                    "findings": [],
+                    "reportRef": "",
+                },
+            )
             self.assertEqual(data["tasks"][1]["dependsOn"], ["TASK-001"])
             self.assertEqual(data["tasks"][0]["files"]["create"], [".harness/schemas/tasks.schema.json"])
             self.assertEqual(data["tasks"][0]["files"]["modify"], [".harness/templates/tasks.template.json"])

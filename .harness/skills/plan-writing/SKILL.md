@@ -116,7 +116,7 @@ Hard rules:
 - Do not hand-write `tasks.json` when `materialize-tasks.py` can parse the plan.
 - Do not create checkbox execution state in `plan.md`.
 - Keep the task contract section at the end of `plan.md`; the current materializer reads task bodies until the next task anchor.
-- Do not add fields unsupported by schema, such as `review`.
+- Do not hand-write review outcomes during plan writing; `materialize-tasks.py` initializes `review.lastResult = "not_run"`.
 - Do not activate the first task.
 - Do not write `workflow-state.json` directly.
 
@@ -130,6 +130,7 @@ Run the materialization command and relevant template/schema tests. At minimum, 
 - Every `dependsOn` references an existing task.
 - Every task has file boundaries, acceptance, and verification commands or checks.
 - Every task is initially `idle`.
+- Every task has `review.lastResult = "not_run"` and `review.threshold = 85`.
 - `handoff.md` describes planning/pre-activation state, not an active task.
 
 ## Plan Contract Rules
@@ -166,7 +167,7 @@ Task activation belongs to `.harness/rules/workflow-lifecycle.md`.
 
 After plan writing:
 
-- `tasks.json` contains only idle tasks.
+- `tasks.json` contains only idle tasks, with verification and review gates both initialized to `not_run`.
 - `workflow-state.activeTaskId` remains `null` until lifecycle activation.
 - `workflow-state.currentPhase` remains `planning` until lifecycle activation.
 - The suggested next action is to run lifecycle activation through `.harness/scripts/lifecycle-transaction.py activate-next`, which coordinates `select-next-task.py`, `update-task.py`, `state-write.py`, and `handoff.md`.
@@ -183,6 +184,6 @@ Before claiming the package is ready, check:
 - There is only one active plan directory.
 - Scope, non-scope, files, tasks, dependencies, acceptance, and verification are covered.
 - `plan.md` has stable anchors and no execution checkboxes.
-- `tasks.json` has no schema-unsupported fields.
+- `tasks.json` has schema-supported `review` fields initialized by the materializer, not hand-authored review results.
 - `handoff.md` is a recovery summary and names state truth sources.
 - No task is active and `workflow-state.json` was not edited directly.

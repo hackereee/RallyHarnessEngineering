@@ -1,5 +1,15 @@
 # Session Next Step
 
+## Implementation Update
+
+- Status: structured task-level review gate implemented in the current working tree.
+- Closed gap: `tasks.schema.json`, `tasks.template.json`, `materialize-tasks.py`, `update-task.py`, and `lifecycle-transaction.py` now require structured review evidence before a plan task can become `done`.
+- Added repo-local skill: `.harness/skills/task-review/SKILL.md`.
+- Verification:
+  - `python3 -m unittest discover -s .harness/tests -p 'test_*.py'` passed, 52 tests.
+  - `python3 .harness/scripts/lint-harness.py --root .` passed.
+- Next Action: Review the structured review gate diff.
+
 ## Context
 
 - Repo: LearnHarnessEngineering
@@ -16,10 +26,10 @@
   - `complete-workflow.py` closes L0/L1 `reviewing -> completed` with session audit evidence.
   - `harness` provides the unified script entrypoint for lifecycle commands.
   - Tests live under `.harness/tests/`.
-- Current gap:
+- Original gap before this implementation:
   - `learning-notes/tasks-workflow-gates.md` already defines testing/review as workflow gates whose structured results should be written back to the current task.
-  - `tasks.schema.json` currently has `verification` but no structured `review` block.
-  - `update-task.py` and `lifecycle-transaction.py review-passed` can move a task to `done` once verification has passed, without a machine-checkable `review.lastResult = "passed"` condition.
+  - `tasks.schema.json` previously had `verification` but lacked a task-level review gate summary.
+  - `update-task.py` and `lifecycle-transaction.py review-passed` previously could move a task to `done` once verification had passed, before `review.lastResult = "passed"` was machine-checkable.
   - A pure pass/fail review field is too coarse for Harness Engineering: it cannot distinguish high-quality implementation, non-blocking observations, blocking findings, and invariant violations.
 
 ## Decision
@@ -80,7 +90,7 @@ Reference `superpowers/requesting-code-review` for the review discipline, but ad
 - Require `verification.lastResult = "passed"`, `review.lastResult = "passed"`, `review.score >= review.threshold`, no critical findings, and no blocking important findings before a task can become `done`.
 - Update `.harness/scripts/lifecycle-transaction.py` so `review-failed` and `review-passed` consume structured review state instead of relying only on handoff/session prose.
 - Add a Harness review skill that produces the structured review report and score, but does not directly mutate `tasks.json`.
-- Update lifecycle docs, `learning-notes/tasks-workflow-gates.md`, and `.harness/skills/plan-writing/SKILL.md` so they no longer describe `review` as schema-unsupported.
+- Update lifecycle docs, `learning-notes/tasks-workflow-gates.md`, and `.harness/skills/plan-writing/SKILL.md` so they describe `review` as schema-supported.
 - Add or update focused tests in `test_tasks_schema.py`, `test_materialize_tasks.py`, `test_update_task.py`, and `test_lifecycle_transaction.py`.
 
 ## Out Of Scope
@@ -91,6 +101,6 @@ Reference `superpowers/requesting-code-review` for the review discipline, but ad
 - Do not treat score as sufficient for pass. Blocking findings override score.
 - Do not start backlog schema, handoff-rules, or check-env in the same step.
 
-## Next Action
+## Original Next Action
 
 Write a failing `.harness/tests/test_tasks_schema.py` assertion proving a `done` task must include a passing review gate: `review.lastResult = "passed"`, `review.score >= review.threshold`, no critical findings, and no blocking important findings.

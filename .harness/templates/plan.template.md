@@ -38,7 +38,7 @@ Run the task schema and materialization tests after any change to the task contr
 
 ## Risks and Open Questions
 
-- Risk: A future change may add a `review` block to `tasks.json`; update schema, template, lifecycle rules, scripts, tests, and this plan template together.
+- Risk: A future change may revise the `review` rubric or threshold; update schema, template, lifecycle rules, scripts, tests, and this plan template together.
 - Open questions: None for the initial contract.
 
 ## Task Contracts
@@ -60,10 +60,11 @@ Acceptance:
 - `tasks.schema.json` validates `tasks.template.json`.
 - Task IDs use `TASK-001` style identifiers.
 - `planSection` points to a stable anchor in `plan.md`.
+- `review` is initialized as a schema-supported gate summary.
 
 Verification:
 - Run: `python3 .harness/tests/test_tasks_schema.py`
-- Check: `tasks.template.json` uses `taskId`, `planSection`, `dependsOn`, `acceptance`, and `verification`.
+- Check: `tasks.template.json` uses `taskId`, `planSection`, `dependsOn`, `acceptance`, `verification`, and `review`.
 
 <a id="task-002-materialize-task-contracts"></a>
 
@@ -80,11 +81,11 @@ Depends on: [TASK-001]
 Acceptance:
 - The script extracts only structured task contracts with stable anchors.
 - The script rejects unknown dependencies and missing verification.
-- Generated tasks are initially `idle` and owned by `developer`.
+- Generated tasks are initially `idle`, owned by `developer`, and have `review.lastResult = "not_run"`.
 
 Verification:
 - Run: `python3 .harness/tests/test_materialize_tasks.py`
-- Check: generated `tasks.json` does not contain a `review` field before schema support exists.
+- Check: generated `tasks.json` contains the default `review` gate summary.
 
 <a id="task-003-document-lifecycle-boundary"></a>
 

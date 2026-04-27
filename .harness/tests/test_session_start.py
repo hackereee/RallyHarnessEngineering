@@ -31,6 +31,15 @@ def base_task() -> dict:
             "checks": ["Manual check passes"],
             "lastResult": "not_run",
         },
+        "review": {
+            "score": 0,
+            "threshold": 85,
+            "lastResult": "not_run",
+            "rubricVersion": "review-rubric-v1",
+            "checks": [],
+            "findings": [],
+            "reportRef": "",
+        },
         "blockedReason": "",
     }
 

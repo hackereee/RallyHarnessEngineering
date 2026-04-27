@@ -13,8 +13,8 @@ Harness lifecycle 状态流转事务协调器。
   - activate-next：从 planning 阶段激活第一个可执行 idle task。
   - start-testing：当前 implementing task 进入 testing gate。
   - start-review：当前 testing task 在验证通过后进入 reviewing gate。
-  - review-failed：当前 reviewing task 回到 implementing。
-  - review-passed：当前 reviewing task 标记 done，并激活下一个 task 或进入 archiving。
+  - review-failed：当前 reviewing task 在结构化 review failed 后回到 implementing。
+  - review-passed：当前 reviewing task 在结构化 review passed 后标记 done，并激活下一个 task 或进入 archiving。
 
 边界：
   - 不直接写 workflow-state.json。
@@ -190,6 +190,46 @@ def ensure_verification_passed(task: dict) -> None:
         raise TransactionError(f"{task.get('taskId')} verification.lastResult 不是 passed")
     if not verification_has_evidence(task):
         raise TransactionError(f"{task.get('taskId')} 缺少 verification.commands 或 verification.checks")
+
+
+def review_blockers(review: dict) -> list[str]:
+    blockers: list[str] = []
+    for finding in review.get("findings", []):
+        if not isinstance(finding, dict):
+            continue
+        severity = finding.get("severity")
+        blocking = finding.get("blocking")
+        summary = finding.get("summary", "<missing summary>")
+        if severity == "critical":
+            blockers.append(f"critical: {summary}")
+        elif severity == "important" and blocking is True:
+            blockers.append(f"blocking important: {summary}")
+    return blockers
+
+
+def ensure_review_passed(task: dict) -> None:
+    review = task.get("review", {})
+    if review.get("lastResult") != "passed":
+        raise TransactionError(f"{task.get('taskId')} review.lastResult 不是 passed")
+    score = review.get("score")
+    threshold = review.get("threshold")
+    if not isinstance(score, int) or not isinstance(threshold, int):
+        raise TransactionError(f"{task.get('taskId')} review.score/review.threshold 必须是整数")
+    if score < threshold:
+        raise TransactionError(f"{task.get('taskId')} review.score={score} 低于 threshold={threshold}")
+    if not review.get("checks"):
+        raise TransactionError(f"{task.get('taskId')} 缺少 review.checks")
+    blockers = review_blockers(review)
+    if blockers:
+        raise TransactionError(f"{task.get('taskId')} 存在阻断 review findings: {'; '.join(blockers)}")
+
+
+def ensure_review_failed(task: dict) -> None:
+    review = task.get("review", {})
+    if review.get("lastResult") != "failed":
+        raise TransactionError(f"{task.get('taskId')} review.lastResult 不是 failed")
+    if not review.get("checks") and not review.get("findings"):
+        raise TransactionError(f"{task.get('taskId')} review failed 缺少 checks 或 findings")
 
 
 def update_task(
@@ -415,6 +455,7 @@ def execute_start_review(root: Path) -> dict:
 def execute_review_failed(root: Path) -> dict:
     preflight(root)
     state, plan_dir, task = active_task(root, "reviewing", "reviewing", "reviewer")
+    ensure_review_failed(task)
     task_id = task["taskId"]
     next_action = f"修正 {task_id} 的 review findings"
     update_task(
@@ -458,6 +499,7 @@ def execute_review_passed(root: Path) -> dict:
     preflight(root)
     state, plan_dir, task = active_task(root, "reviewing", "reviewing", "reviewer")
     ensure_verification_passed(task)
+    ensure_review_passed(task)
     task_id = task["taskId"]
     update_task(
         root,

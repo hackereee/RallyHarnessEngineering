@@ -16,6 +16,18 @@ WORKFLOW_SCHEMA = REPO_ROOT / ".harness" / "schemas" / "workflow-state.schema.js
 TASKS_SCHEMA = REPO_ROOT / ".harness" / "schemas" / "tasks.schema.json"
 
 
+def default_review() -> dict:
+    return {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": "",
+    }
+
+
 def base_task(task_id: str, status: str = "idle", owner_role: str = "developer") -> dict:
     return {
         "taskId": task_id,
@@ -33,6 +45,7 @@ def base_task(task_id: str, status: str = "idle", owner_role: str = "developer")
             "checks": ["baseline check exists"],
             "lastResult": "not_run",
         },
+        "review": default_review(),
         "blockedReason": "",
     }
 

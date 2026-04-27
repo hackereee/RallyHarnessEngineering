@@ -14,7 +14,38 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / ".harness" / "scripts" / "lifecycle-transaction.py"
 
 
-def task_fixture(task_id: str, title: str, *, status: str = "idle", depends_on: list[str] | None = None) -> dict:
+def review_fixture(last_result: str = "not_run") -> dict:
+    score = 90 if last_result == "passed" else 0
+    checks = ["review gate passed"] if last_result == "passed" else []
+    findings = []
+    if last_result == "failed":
+        checks = ["review gate failed"]
+        findings = [
+            {
+                "severity": "important",
+                "blocking": True,
+                "summary": "Lifecycle requirement is not satisfied",
+            }
+        ]
+    return {
+        "score": score,
+        "threshold": 85,
+        "lastResult": last_result,
+        "rubricVersion": "review-rubric-v1",
+        "checks": checks,
+        "findings": findings,
+        "reportRef": "work/sessions/2026-04-27/session-review.md" if last_result != "not_run" else "",
+    }
+
+
+def task_fixture(
+    task_id: str,
+    title: str,
+    *,
+    status: str = "idle",
+    depends_on: list[str] | None = None,
+    review_result: str | None = None,
+) -> dict:
     slug = task_id.lower()
     owner_by_status = {
         "idle": "developer",
@@ -24,6 +55,7 @@ def task_fixture(task_id: str, title: str, *, status: str = "idle", depends_on: 
         "done": "developer",
     }
     verification_result = "passed" if status in {"reviewing", "done"} else "not_run"
+    resolved_review_result = review_result or ("passed" if status == "done" else "not_run")
     return {
         "taskId": task_id,
         "title": title,
@@ -40,6 +72,7 @@ def task_fixture(task_id: str, title: str, *, status: str = "idle", depends_on: 
             "checks": [],
             "lastResult": verification_result,
         },
+        "review": review_fixture(resolved_review_result),
         "blockedReason": "",
     }
 
@@ -199,7 +232,7 @@ class LifecycleTransactionTest(unittest.TestCase):
             self.write_harness_assets(root)
             plan_dir = self.write_active_plan(
                 root,
-                [task_fixture("TASK-001", "Implement lifecycle transaction", status="reviewing")],
+                [task_fixture("TASK-001", "Implement lifecycle transaction", status="reviewing", review_result="passed")],
             )
             state_path = self.write_state(root, workflow_state("reviewing", "reviewer", "TASK-001"))
 
@@ -209,6 +242,7 @@ class LifecycleTransactionTest(unittest.TestCase):
             task = json.loads((plan_dir / "tasks.json").read_text(encoding="utf-8"))["tasks"][0]
             self.assertEqual(task["status"], "done")
             self.assertEqual(task["verification"]["lastResult"], "passed")
+            self.assertEqual(task["review"]["lastResult"], "passed")
 
             state = json.loads(state_path.read_text(encoding="utf-8"))
             self.assertEqual(state["currentPhase"], "archiving")
@@ -239,13 +273,30 @@ class LifecycleTransactionTest(unittest.TestCase):
             self.assertEqual(state["currentPhase"], "reviewing")
             self.assertEqual(state["ownerRole"], "reviewer")
 
+    def test_review_passed_requires_structured_review_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+            self.write_active_plan(
+                root,
+                [task_fixture("TASK-001", "Implement lifecycle transaction", status="reviewing")],
+            )
+            state_path = self.write_state(root, workflow_state("reviewing", "reviewer", "TASK-001"))
+            before = state_path.read_text(encoding="utf-8")
+
+            result = self.run_transaction(root, "review-passed")
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("review.lastResult", result.stderr + result.stdout)
+            self.assertEqual(state_path.read_text(encoding="utf-8"), before)
+
     def test_review_failed_returns_active_task_to_implementation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.write_harness_assets(root)
             plan_dir = self.write_active_plan(
                 root,
-                [task_fixture("TASK-001", "Implement lifecycle transaction", status="reviewing")],
+                [task_fixture("TASK-001", "Implement lifecycle transaction", status="reviewing", review_result="failed")],
             )
             state_path = self.write_state(root, workflow_state("reviewing", "reviewer", "TASK-001"))
 

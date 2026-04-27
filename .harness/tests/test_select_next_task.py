@@ -16,6 +16,18 @@ SELECT_NEXT_TASK = REPO_ROOT / ".harness" / "scripts" / "select-next-task.py"
 TASKS_SCHEMA = REPO_ROOT / ".harness" / "schemas" / "tasks.schema.json"
 
 
+def default_review() -> dict:
+    return {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": "",
+    }
+
+
 def base_task(task_id: str, *, depends_on: list[str] | None = None) -> dict:
     slug = task_id.lower()
     return {
@@ -34,6 +46,7 @@ def base_task(task_id: str, *, depends_on: list[str] | None = None) -> dict:
             "checks": ["baseline check exists"],
             "lastResult": "not_run",
         },
+        "review": default_review(),
         "blockedReason": "",
     }
 
@@ -44,6 +57,15 @@ def mark_done(task: dict) -> None:
     task["nextAction"] = ""
     task["verification"]["lastResult"] = "passed"
     task["verification"]["checks"] = [f"{task['taskId']} verification passed"]
+    task["review"] = {
+        "score": 90,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [f"{task['taskId']} review passed"],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-27/session-review.md",
+    }
 
 
 def base_manifest() -> dict:

@@ -18,6 +18,27 @@ UPDATE_TASK = REPO_ROOT / ".harness" / "scripts" / "update-task.py"
 TASKS_SCHEMA = REPO_ROOT / ".harness" / "schemas" / "tasks.schema.json"
 
 
+def default_review() -> dict:
+    return {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": "",
+    }
+
+
+def passed_review() -> dict:
+    review = default_review()
+    review["score"] = 90
+    review["lastResult"] = "passed"
+    review["checks"] = ["review gate passed"]
+    review["reportRef"] = "work/sessions/2026-04-27/session-review.md"
+    return review
+
+
 def base_task(task_id: str, *, depends_on: list[str] | None = None) -> dict:
     slug = task_id.lower()
     return {
@@ -36,6 +57,7 @@ def base_task(task_id: str, *, depends_on: list[str] | None = None) -> dict:
             "checks": ["baseline check exists"],
             "lastResult": "not_run",
         },
+        "review": default_review(),
         "blockedReason": "",
     }
 
@@ -118,6 +140,37 @@ class UpdateTaskTest(unittest.TestCase):
                 ["python3 .harness/tests/test_update_task.py"],
             )
 
+    def test_updates_review_gate_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tasks_path = self.write_tasks(tmp)
+
+            result = self.run_update(
+                tasks_path,
+                "--task",
+                "TASK-001",
+                "--review-score",
+                "92",
+                "--review-last-result",
+                "passed",
+                "--review-check",
+                "schema, scripts, and tests are synchronized",
+                "--review-finding-json",
+                '{"severity":"important","blocking":false,"summary":"Document follow-up","deferReason":"Tracked in handoff"}',
+                "--review-report-ref",
+                "work/sessions/2026-04-27/session-review.md",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            data = json.loads(tasks_path.read_text(encoding="utf-8"))
+            self.assert_schema_valid(data)
+            review = data["tasks"][0]["review"]
+            self.assertEqual(review["score"], 92)
+            self.assertEqual(review["lastResult"], "passed")
+            self.assertEqual(review["checks"], ["schema, scripts, and tests are synchronized"])
+            self.assertEqual(review["findings"][0]["severity"], "important")
+            self.assertFalse(review["findings"][0]["blocking"])
+            self.assertEqual(review["reportRef"], "work/sessions/2026-04-27/session-review.md")
+
     def test_rejects_done_when_dependency_is_not_done(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tasks_path = self.write_tasks(tmp)
@@ -133,6 +186,12 @@ class UpdateTaskTest(unittest.TestCase):
                 "passed",
                 "--verification-check",
                 "TASK-002 verification passed",
+                "--review-score",
+                "90",
+                "--review-last-result",
+                "passed",
+                "--review-check",
+                "TASK-002 review passed",
             )
 
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
@@ -161,6 +220,7 @@ class UpdateTaskTest(unittest.TestCase):
         manifest["tasks"][0]["status"] = "done"
         manifest["tasks"][0]["verification"]["lastResult"] = "passed"
         manifest["tasks"][0]["verification"]["checks"] = ["TASK-001 verification passed"]
+        manifest["tasks"][0]["review"] = passed_review()
 
         with tempfile.TemporaryDirectory() as tmp:
             tasks_path = self.write_tasks(tmp, copy.deepcopy(manifest))
@@ -179,6 +239,12 @@ class UpdateTaskTest(unittest.TestCase):
                 "passed",
                 "--verification-check",
                 "TASK-002 verification passed",
+                "--review-score",
+                "90",
+                "--review-last-result",
+                "passed",
+                "--review-check",
+                "TASK-002 review passed",
             )
 
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
@@ -186,6 +252,28 @@ class UpdateTaskTest(unittest.TestCase):
             self.assert_schema_valid(data)
             self.assertEqual(data["tasks"][1]["status"], "done")
             self.assertEqual(data["tasks"][1]["verification"]["lastResult"], "passed")
+            self.assertEqual(data["tasks"][1]["review"]["lastResult"], "passed")
+
+    def test_rejects_done_when_review_gate_has_not_passed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tasks_path = self.write_tasks(tmp)
+            before = tasks_path.read_text(encoding="utf-8")
+
+            result = self.run_update(
+                tasks_path,
+                "--task",
+                "TASK-001",
+                "--status",
+                "done",
+                "--verification-last-result",
+                "passed",
+                "--verification-check",
+                "TASK-001 verification passed",
+            )
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("review", result.stderr + result.stdout)
+            self.assertEqual(tasks_path.read_text(encoding="utf-8"), before)
 
 
 if __name__ == "__main__":

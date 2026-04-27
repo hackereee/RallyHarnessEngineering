@@ -6,7 +6,7 @@ materialize-tasks.py
 
 边界：
   - 只解析结构化任务契约，不从自由文本猜任务。
-  - 只生成 idle tasks，不激活 task，不写 workflow-state.json。
+  - 只生成 idle tasks，并初始化 verification/review gate，不激活 task，不写 workflow-state.json。
   - 写入前校验 tasks.schema.json，并检查 taskId / anchor / dependsOn。
 """
 
@@ -38,6 +38,18 @@ CHECK_RE = re.compile(r"^-\s*Check:\s*(?P<value>.+?)\s*$", re.IGNORECASE)
 
 class MaterializeError(Exception):
     pass
+
+
+def default_review() -> dict:
+    return {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": "",
+    }
 
 
 def strip_ticks(value: str) -> str:
@@ -206,6 +218,7 @@ def extract_tasks(plan_text: str) -> list[dict]:
                 "nextAction": "",
                 "ownerRole": "developer",
                 **body,
+                "review": default_review(),
                 "blockedReason": "",
             }
         )

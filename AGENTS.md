@@ -53,7 +53,7 @@
   - `implementing` -> `status=implementing`, `ownerRole=developer`
   - `testing` -> `status=testing`, `ownerRole=tester`
   - `reviewing` -> `status=reviewing`, `ownerRole=reviewer`
-- task 进入 `done` 前必须有 acceptance、验证依据，且 `verification.lastResult == "passed"`。
+- task 进入 `done` 前必须有 acceptance、验证依据与结构化 review 依据，且 `verification.lastResult == "passed"`、`review.lastResult == "passed"`、`review.score >= review.threshold`，并且没有 critical finding 或 blocking important finding。
 - `nextAction` 必须是单句原子动作；禁止用“优化、完善、整理、梳理”等高层目标替代下一步。
 
 ## 修改原则

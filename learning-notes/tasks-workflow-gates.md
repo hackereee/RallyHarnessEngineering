@@ -45,7 +45,7 @@ work/plans/active/<PLAN-ID>/tasks.json
 - `currentStep = ""`
 - `nextAction = ""`
 - `verification.lastResult = "not_run"`
-- `review.lastResult = "not_run"`（若 schema 引入 review block）
+- `review.lastResult = "not_run"`
 
 ### 3. 更新
 
@@ -141,26 +141,40 @@ TASK-001 Implement feature
 
 ## review 结果如何回写
 
-建议在 `tasks.json` 中引入 `review` block，用来记录 code review gate 的结构化结果：
+`tasks.json` 已引入 `review` block，用来记录 code review gate 的结构化结果：
 
 ```json
 {
   "review": {
+    "score": 90,
+    "threshold": 85,
+    "lastResult": "passed",
+    "rubricVersion": "review-rubric-v1",
     "checks": [
       "implementation matches plan acceptance",
       "no direct write to workflow-state.json outside state-write.py",
       "tests cover the changed behavior"
     ],
-    "findings": [],
-    "lastResult": "passed"
+    "findings": [
+      {
+        "severity": "important",
+        "blocking": false,
+        "summary": "Follow-up is acceptable outside this task",
+        "deferReason": "Tracked in handoff"
+      }
+    ],
+    "reportRef": "work/sessions/2026-04-27/session-review.md"
   }
 }
 ```
 
 规则：
 
+- `review.score` 是 0-100 的质量评分；v1 `threshold` 固定为 `85`。
+- `review.lastResult = "passed"` 要求 `score >= threshold`、存在 `review.checks`、没有 critical finding、没有 blocking important finding。
 - `review.checks` 记录本次 review 的检查维度。
 - `review.findings` 只记录摘要，不放大段 review 全文。
+- critical finding 一票否决；important finding 默认阻断，若不阻断必须 `blocking = false` 并写明 `deferReason`。
 - `review.lastResult = "failed"` 时，workflow 应回到 implementing。
 - 非阻断问题可进入 backlog 或 handoff，不应伪装成 passed。
 
@@ -180,7 +194,7 @@ TASK-001 Implement feature
 
 1. `acceptance` 已满足。
 2. `verification.lastResult == "passed"`。
-3. `review.lastResult == "passed"`。
+3. `review.lastResult == "passed"`，`review.score >= review.threshold`，且无 critical / blocking important finding。
 4. 所有 `dependsOn` 中的任务均为 `done`。
 
 这意味着 `done` 不是 Agent 的口头声明，而是由 workflow gate 结果支撑的结构化状态。

@@ -7,10 +7,10 @@ update-task.py
 
 职责：
   - 定位单个 taskId。
-  - 更新 status / ownerRole / currentStep / nextAction / verification / blockedReason。
+  - 更新 status / ownerRole / currentStep / nextAction / verification / review / blockedReason。
   - 对 active 状态自动补齐 ownerRole：implementing=developer、testing=tester、reviewing=reviewer。
   - 写入前校验 tasks.schema.json。
-  - 校验 done 前置条件：verification passed，且 dependsOn 均为 done。
+  - 校验 done 前置条件：verification passed、review passed，且 dependsOn 均为 done。
   - 临时文件 + os.replace 原子落盘。
 
 退出码：
@@ -46,6 +46,7 @@ ACTIVE_ROLE_BY_STATUS = {
 STATUS_CHOICES = ("idle", "implementing", "testing", "reviewing", "blocked", "done")
 OWNER_ROLE_CHOICES = ("developer", "planner", "reviewer", "tester")
 VERIFICATION_RESULT_CHOICES = ("not_run", "passed", "failed")
+REVIEW_RESULT_CHOICES = ("not_run", "passed", "failed")
 
 
 class UpdateTaskError(Exception):
@@ -97,6 +98,28 @@ def append_unique(values: list[str], additions: list[str]) -> None:
             values.append(item)
 
 
+def default_review() -> dict:
+    return {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": "",
+    }
+
+
+def parse_review_finding(raw: str) -> dict:
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise UpdateTaskError(f"--review-finding-json must be a JSON object: {exc}") from exc
+    if not isinstance(value, dict):
+        raise UpdateTaskError("--review-finding-json must be a JSON object")
+    return value
+
+
 def apply_updates(task: dict, args: argparse.Namespace) -> None:
     if args.status is not None:
         task["status"] = args.status
@@ -122,6 +145,24 @@ def apply_updates(task: dict, args: argparse.Namespace) -> None:
         append_unique(verification.setdefault("commands", []), args.verification_command)
     if args.verification_check:
         append_unique(verification.setdefault("checks", []), args.verification_check)
+
+    review = task.setdefault("review", default_review())
+    if args.review_score is not None:
+        review["score"] = args.review_score
+    if args.review_threshold is not None:
+        review["threshold"] = args.review_threshold
+    if args.review_last_result is not None:
+        review["lastResult"] = args.review_last_result
+    if args.review_check:
+        append_unique(review.setdefault("checks", []), args.review_check)
+    if args.review_finding_json:
+        findings = review.setdefault("findings", [])
+        for raw in args.review_finding_json:
+            finding = parse_review_finding(raw)
+            if finding not in findings:
+                findings.append(finding)
+    if args.review_report_ref is not None:
+        review["reportRef"] = args.review_report_ref
 
 
 def validate_manifest(manifest: dict, schema: dict) -> None:
@@ -159,6 +200,42 @@ def validate_done_dependencies(manifest: dict, task: dict) -> None:
             raise UpdateTaskError(f"{task.get('taskId')}: dependsOn {dependency} is not done")
 
 
+def validate_done_review(task: dict) -> None:
+    if task.get("status") != "done":
+        return
+
+    review = task.get("review", {})
+    if review.get("lastResult") != "passed":
+        raise UpdateTaskError(f"{task.get('taskId')}: review.lastResult is not passed")
+    if not review.get("checks"):
+        raise UpdateTaskError(f"{task.get('taskId')}: review.checks is empty")
+
+    score = review.get("score")
+    threshold = review.get("threshold")
+    if not isinstance(score, int) or not isinstance(threshold, int):
+        raise UpdateTaskError(f"{task.get('taskId')}: review score and threshold must be integers")
+    if score < threshold:
+        raise UpdateTaskError(
+            f"{task.get('taskId')}: review.score {score} is below threshold {threshold}"
+        )
+
+    blockers: list[str] = []
+    for finding in review.get("findings", []):
+        if not isinstance(finding, dict):
+            continue
+        severity = finding.get("severity")
+        blocking = finding.get("blocking")
+        summary = finding.get("summary", "<missing summary>")
+        if severity == "critical":
+            blockers.append(f"critical: {summary}")
+        elif severity == "important" and blocking is True:
+            blockers.append(f"blocking important: {summary}")
+    if blockers:
+        raise UpdateTaskError(
+            f"{task.get('taskId')}: review has blocking findings: " + "; ".join(blockers)
+        )
+
+
 def build_updated_manifest(args: argparse.Namespace) -> dict:
     manifest = load_json(args.tasks)
     schema = load_json(args.schema)
@@ -170,6 +247,7 @@ def build_updated_manifest(args: argparse.Namespace) -> dict:
     apply_updates(task, args)
     validate_manifest(manifest, schema)
     validate_done_dependencies(manifest, task)
+    validate_done_review(task)
 
     after = json.dumps(manifest, sort_keys=True, ensure_ascii=False)
     if before == after:
@@ -221,6 +299,15 @@ def main(argv: Iterable[str] | None = None) -> int:
                         help="Append a verification command; repeatable")
     parser.add_argument("--verification-check", action="append", default=[],
                         help="Append a verification check; repeatable")
+    parser.add_argument("--review-score", type=int, help="review.score")
+    parser.add_argument("--review-threshold", type=int, help="review.threshold")
+    parser.add_argument("--review-last-result", choices=REVIEW_RESULT_CHOICES,
+                        help="review.lastResult")
+    parser.add_argument("--review-check", action="append", default=[],
+                        help="Append a review check; repeatable")
+    parser.add_argument("--review-finding-json", action="append", default=[],
+                        help="Append a review finding JSON object; repeatable")
+    parser.add_argument("--review-report-ref", help="review.reportRef")
     args = parser.parse_args(list(argv) if argv is not None else None)
     return run(args)
 

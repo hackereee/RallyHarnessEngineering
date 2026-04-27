@@ -59,6 +59,15 @@ def reviewing_task() -> dict:
             "checks": [],
             "lastResult": "passed",
         },
+        "review": {
+            "score": 0,
+            "threshold": 85,
+            "lastResult": "not_run",
+            "rubricVersion": "review-rubric-v1",
+            "checks": [],
+            "findings": [],
+            "reportRef": "",
+        },
         "blockedReason": "",
     }
 

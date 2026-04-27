@@ -56,7 +56,9 @@ class PlanWritingTemplatesTest(unittest.TestCase):
                 self.assertEqual(task["status"], "idle")
                 self.assertEqual(task["ownerRole"], "developer")
                 self.assertEqual(task["verification"]["lastResult"], "not_run")
-                self.assertNotIn("review", task)
+                self.assertEqual(task["review"]["lastResult"], "not_run")
+                self.assertEqual(task["review"]["threshold"], 85)
+                self.assertEqual(task["review"]["rubricVersion"], "review-rubric-v1")
 
     def test_handoff_template_describes_pre_activation_planning_state(self) -> None:
         text = HANDOFF_TEMPLATE.read_text(encoding="utf-8")

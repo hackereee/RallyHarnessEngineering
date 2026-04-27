@@ -32,6 +32,15 @@ def done_task(task_id: str) -> dict:
             "checks": [],
             "lastResult": "passed",
         },
+        "review": {
+            "score": 90,
+            "threshold": 85,
+            "lastResult": "passed",
+            "rubricVersion": "review-rubric-v1",
+            "checks": ["review gate passed"],
+            "findings": [],
+            "reportRef": "work/sessions/2026-04-27/session-review.md",
+        },
         "blockedReason": "",
     }
 
