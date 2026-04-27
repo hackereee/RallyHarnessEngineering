@@ -96,6 +96,7 @@ Before writing files, give a concise write summary:
 - Scope and non-scope.
 - File boundaries.
 - Task list with dependencies, acceptance, and verification.
+- Expected Architecture Impact for target project architecture and Harness framework architecture.
 - Risks and open questions.
 - Statement that the next step is the planning-time Plan Review Gate, not task activation.
 
@@ -112,6 +113,7 @@ The review must check:
 - Dependencies are acyclic and only reference delivery tasks.
 - Acceptance criteria are observable.
 - Verification commands or checks are reproducible.
+- Architecture Impact distinguishes target project architecture from Harness framework architecture.
 - Testing and review remain workflow gates, not standalone tasks.
 - The plan does not require direct writes to `workflow-state.json` or hand-authored `tasks.json`.
 
@@ -126,6 +128,7 @@ Reviewed At: <ISO-8601 timestamp>
 
 Checks:
 - Scope, file boundaries, task dependencies, acceptance, and verification are reviewable.
+- Architecture Impact is recorded as a gate, not a standalone task.
 - Testing and review remain workflow gates, not standalone tasks.
 
 Findings:
@@ -158,6 +161,7 @@ Hard rules:
 Run the materialization command and relevant template/schema tests. At minimum, verify:
 
 - `plan.md` contains `## Plan Review Gate` and `Status: passed`.
+- `plan.md` contains `## Architecture Impact` and names target project architecture and Harness framework architecture impact.
 - `tasks.json` is valid JSON and passes `.harness/schemas/tasks.schema.json`.
 - Every `taskId` is unique.
 - Every `planSection` points to an anchor in `plan.md`.
@@ -208,6 +212,7 @@ After plan writing:
 - Do not run `select-next-task.py` as a substitute for materialization validation, and do not apply its suggested updates from plan-writing.
 
 Testing and review are workflow gates. Never create separate tasks whose only purpose is "test" or "review".
+Architecture Impact is also a workflow gate. Never create a separate task whose only purpose is "decide whether architecture changed"; create a task only when updating architecture documentation is a concrete deliverable.
 
 ## Self-Review
 
@@ -217,6 +222,7 @@ Before claiming the package is ready, check:
 - L2/L3 produced `plan.md`, `tasks.json`, and `handoff.md` together.
 - There is only one active plan directory.
 - Scope, non-scope, files, tasks, dependencies, acceptance, and verification are covered.
+- Architecture Impact records expected updates or explicit non-impact for root `ARCHITECTURE.md` and Harness framework architecture.
 - `plan.md` records a passed Plan Review Gate before materialization.
 - `plan.md` has stable anchors and no execution checkboxes.
 - `tasks.json` has schema-supported `review` fields initialized by the materializer, not hand-authored review results.

@@ -143,6 +143,9 @@ class ArchivePlanTest(unittest.TestCase):
                 "- `python3 -m unittest discover -s .harness/tests -p 'test_*.py'` passed.\n\n"
                 "## Review Summary\n\n"
                 "- Review passed.\n\n"
+                "## Architecture Impact\n\n"
+                "- Target project architecture: unchanged.\n"
+                "- Harness framework architecture: unchanged.\n\n"
                 "## Deviations\n\n"
                 "- None.\n\n"
                 "## Follow-ups\n\n"
@@ -204,6 +207,30 @@ class ArchivePlanTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
             self.assertIn("closure.md", result.stderr + result.stdout)
+            self.assertTrue(active_dir.exists())
+            self.assertFalse((root / "work" / "plans" / "archived" / "PLAN-001").exists())
+
+    def test_rejects_closure_without_architecture_impact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+            active_dir = self.write_active_plan(root)
+            closure_path = active_dir / "closure.md"
+            closure_path.write_text(
+                closure_path.read_text(encoding="utf-8").replace(
+                    "## Architecture Impact\n\n"
+                    "- Target project architecture: unchanged.\n"
+                    "- Harness framework architecture: unchanged.\n\n",
+                    "",
+                ),
+                encoding="utf-8",
+            )
+            self.write_state(root)
+
+            result = self.run_archive(root)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("Architecture Impact", result.stderr + result.stdout)
             self.assertTrue(active_dir.exists())
             self.assertFalse((root / "work" / "plans" / "archived" / "PLAN-001").exists())
 

@@ -39,7 +39,7 @@ Harness routes work through workflow phases:
 planning -> implementing -> testing -> reviewing -> archiving
 ```
 
-Testing and review are workflow gates, not standalone tasks. L2/L3 workflows use one active plan and at most one active task during execution phases. Existing `workflow-state.json` updates must go through `state-write.py`; task state updates must go through `update-task.py`.
+Testing, review, and Architecture Impact are workflow gates, not standalone tasks. Architecture Impact records whether root `ARCHITECTURE.md` or Harness framework architecture needs an update after the delivered change. L2/L3 workflows use one active plan and at most one active task during execution phases. Existing `workflow-state.json` updates must go through `state-write.py`; task state updates must go through `update-task.py`.
 
 ## Real Project Integration
 

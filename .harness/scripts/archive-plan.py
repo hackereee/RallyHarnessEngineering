@@ -26,6 +26,7 @@ CLOSURE_REQUIRED_SECTIONS = (
     "## Delivered",
     "## Verification Evidence",
     "## Review Summary",
+    "## Architecture Impact",
     "## Deviations",
     "## Follow-ups",
 )

@@ -22,6 +22,7 @@ Read these before producing a review result:
 - Verification evidence from the testing gate
 - `.harness/rules/workflow-lifecycle.md`
 - `learning-notes/tasks-workflow-gates.md`
+- The plan's `Architecture Impact` section and any architecture files touched by the task
 
 Review only the current `activeTaskId`. If there is no active task, stop and report that this skill is only for plan-backed task review.
 
@@ -37,6 +38,7 @@ Check these categories:
 - Writes go through the correct gateways: `update-task.py` for `tasks.json`, `state-write.py` for `workflow-state.json`.
 - Lifecycle invariants hold: testing and review are gates, not tasks; only one active task exists.
 - `nextAction` remains a single atomic action.
+- Architecture Impact is correct: target project changes update or preserve root `ARCHITECTURE.md` intentionally, and Harness framework changes update or preserve `.harness/ARCHITECTURE.md` / `harness-design/architecture.md` intentionally.
 - Archive or completion path remains consistent with task level.
 - No unrelated refactor or runtime-state shortcut was introduced.
 

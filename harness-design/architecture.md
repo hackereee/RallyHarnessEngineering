@@ -152,8 +152,8 @@ repo/
 
 - **`.harness/skills/project-init/SKILL.md`**：初始化 Harness 到目标开发仓库时使用的顶层语义 skill；负责入口文档发现、Harness 架构引用落位和子流程编排，不直接替代确定性脚本。
 - **`.harness/skills/project-env-contract/SKILL.md`**：生成项目环境契约的语义 skill；指导 Agent 先读取仓库证据，再生成 `.harness/contracts/project-contracts.json`，其中包含 project profile、environment checks 与 command registry。project environment differences belong in project contracts, not in `session-start.py`；`session-start.py` 只校验 Harness 启动所需的核心资产与运行态形态。
-- **`plan-writing/SKILL.md`**：将需求、backlog item 或已确认设计转成 L2/L3 active plan package；先完成 planning-time `Plan Review Gate` 并在 `plan.md` 记录 `Status: passed`，再使用 `materialize-tasks.py` 生成 `tasks.json`，但不激活 task、不写 `workflow-state.json`。
-- **`task-review/SKILL.md`**：根据实现、plan/task acceptance、验证证据和 diff 生成结构化 review 摘要；输出给 `update-task.py` 使用，不直接写 `tasks.json` 或 `workflow-state.json`。
+- **`plan-writing/SKILL.md`**：将需求、backlog item 或已确认设计转成 L2/L3 active plan package；先记录预期 Architecture Impact，再完成 planning-time `Plan Review Gate` 并在 `plan.md` 记录 `Status: passed`，最后使用 `materialize-tasks.py` 生成 `tasks.json`，但不激活 task、不写 `workflow-state.json`。
+- **`task-review/SKILL.md`**：根据实现、plan/task acceptance、验证证据、Architecture Impact 和 diff 生成结构化 review 摘要；输出给 `update-task.py` 使用，不直接写 `tasks.json` 或 `workflow-state.json`。
 
 ### `.harness/scripts/`
 - **`harness`**：统一 CLI 入口。它只做参数归一和薄分发，不重新实现生命周期逻辑；`validate-state` 子命令默认校验 `work/workflow-state.json`。
@@ -166,8 +166,8 @@ repo/
 - **`start-workflow.py`**：新 workflow 启动工具。只允许从 `completed` / `archived` 终态开启新的 `active` workflow；direct L0/L1 进入 `implementing/developer`，planned L2/L3 绑定已存在 active plan package 并进入 `planning/planner`。脚本先在隔离副本里 dry-run，再通过 `state-write.py --allow-terminal-reset` 写入真实 state，并执行 lint / validate postflight。
 - **`lifecycle-transaction.py`**：生命周期流转事务协调器。对一次 transition 执行 preflight、隔离 dry-run、调用 `update-task.py` 与 `state-write.py`、追加 `handoff.md`、postflight；它不绕过底层写入网关。当前支持 `activate-next`、`start-testing`、`start-review`、`review-failed`、`review-passed`，其中 review 流转消费 `tasks.json` 中的结构化 review gate。
 - **`commit-task.py`**：L2/L3 task 完成提交 gate。只在 `lifecycle-transaction.py review-passed` 成功后运行，确认目标 task 已 `done` 且 verification/review 均 passed，再执行 `git add -A` 与 `git commit`。它允许同一次提交包含 `review-passed` 产生的下一个 task 激活状态变更；它不写 `workflow-state.json`、不写 `tasks.json`，也不替代 lifecycle transition。
-- **`archive-plan.py`**：归档工具。要求当前 workflow 处于 `archiving`、active plan 内所有 task 均为 `done`，并且 `closure.md` 已由 Agent 写好；脚本校验后将 active plan package 迁移到 `work/plans/archived/<PLAN-ID>/`，再经 `state-write.py` 将 workflow 收到 archived 形态。
-- **`complete-workflow.py`**：L0/L1 direct workflow 收口工具。要求无 active plan、无 active task、当前处于 `reviewing/reviewer`，并要求调用方提供 verification evidence 与 review summary；脚本经 `state-write.py` 将 workflow 收到 `completed` 形态，并追加 `work/sessions/YYYY-MM-DD/workflow-completions.jsonl` 审计记录。
+- **`archive-plan.py`**：归档工具。要求当前 workflow 处于 `archiving`、active plan 内所有 task 均为 `done`，并且 `closure.md` 已由 Agent 写好且包含 `Architecture Impact`；脚本校验后将 active plan package 迁移到 `work/plans/archived/<PLAN-ID>/`，再经 `state-write.py` 将 workflow 收到 archived 形态。
+- **`complete-workflow.py`**：L0/L1 direct workflow 收口工具。要求无 active plan、无 active task、当前处于 `reviewing/reviewer`，并要求调用方提供 verification evidence、review summary 与 architecture impact summary；脚本经 `state-write.py` 将 workflow 收到 `completed` 形态，并追加 `work/sessions/YYYY-MM-DD/workflow-completions.jsonl` 审计记录。
 - **`backlog-intake.py`**：backlog intake 写入网关。它从 `.harness/templates/backlogs.template.json` 初始化缺失的 `work/backlog/backlogs.json`，按 `BL-NNN` 分配 ID，校验完整 store 后原子追加。它不写 `workflow-state.json`、`tasks.json` 或 active plan 文件；`preempt` 只请求 LLM 评估，不自动中断当前 workflow。
 - **`check-project-env.py`**：项目环境契约执行器。它先按 `.harness/schemas/project-contracts.schema.json` 校验 `.harness/contracts/project-contracts.json` 或调用方传入的 contract，再执行 contract 声明的 command / probe。contracts 是 truth source；runner 不写 `workflow-state.json`、不写 `tasks.json`，也不会在 `session-start.py` 中自动执行。
 - **`init-project-entrypoint.py`**：真实项目 Agent 入口执行器。它检测 `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` 等入口，缺失时返回 `NEEDS_ENTRYPOINT`，并且只通过 `harness-engineering` managed block 创建或更新入口引用；执行写入时若 root `ARCHITECTURE.md` 缺失，会创建空文件，为后续 task completion summary 判断是否归纳更新业务架构做准备；最后写入 `.harness/contracts/project-entrypoints.json`。它不写 workflow/task 运行态。
@@ -184,7 +184,7 @@ repo/
 - **`backlog/backlogs.json`**：backlog intake 的运行态数据，结构由 `.harness/schemas/backlogs.schema.json` 约束，初始形态来自 `.harness/templates/backlogs.template.json`，只能经 `.harness/scripts/backlog-intake.py` 追加。它只记录 incoming work，不是 active plan，也不驱动当前 workflow 阶段。
 - **`plans/active/<PLAN-ID>/`** 与 **`plans/archived/<PLAN-ID>/`**：active ↔ archived 目录对称，归档只需改一段路径。
 - **`sessions/YYYY-MM-DD/session-<id>.md`**：会话启动与 Agent 语义记录；它是审计证据，不是 workflow/task truth source。
-- **`sessions/YYYY-MM-DD/workflow-completions.jsonl`**：L0/L1 direct workflow completion 审计记录；由 `complete-workflow.py` 追加，保存 verification evidence 与 review summary。
+- **`sessions/YYYY-MM-DD/workflow-completions.jsonl`**：L0/L1 direct workflow completion 审计记录；由 `complete-workflow.py` 追加，保存 verification evidence、review summary 与 architecture impact summary。
 
 ### `src/`
 业务代码；不与 Harness 交叉，保证 Harness 可平移到任意工程。

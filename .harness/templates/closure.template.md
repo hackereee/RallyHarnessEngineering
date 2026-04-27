@@ -17,6 +17,11 @@
 
 - Summarize the review decision and any non-blocking findings.
 
+## Architecture Impact
+
+- Target project architecture: state whether root `ARCHITECTURE.md` was updated or why it remains unchanged.
+- Harness framework architecture: state whether `.harness/ARCHITECTURE.md`, `harness-design/architecture.md`, or Harness rules/templates/scripts/skills were updated or why they remain unchanged.
+
 ## Deviations
 
 - Record scope changes, accepted risks, or implementation differences from `plan.md`.

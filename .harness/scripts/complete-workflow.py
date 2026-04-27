@@ -142,6 +142,8 @@ def ensure_evidence(args: argparse.Namespace) -> None:
         raise CompleteWorkflowError("完成 L0/L1 workflow 前必须提供 verification command 或 check")
     if not args.review_summary.strip():
         raise CompleteWorkflowError("--review-summary 不能为空")
+    if not args.architecture_impact.strip():
+        raise CompleteWorkflowError("--architecture-impact 不能为空；必须记录 architecture impact 判断")
 
 
 def write_state_completed(root: Path) -> None:
@@ -187,6 +189,7 @@ def append_completion_audit(root: Path, timestamp: datetime, before: dict, args:
             "checks": args.verification_check,
         },
         "reviewSummary": args.review_summary.strip(),
+        "architectureImpact": args.architecture_impact.strip(),
     }
     with audit_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -232,6 +235,11 @@ def main(argv: Iterable[str] | None = None) -> int:
         help="Manual or structural verification check supporting completion; repeatable",
     )
     parser.add_argument("--review-summary", required=True, help="Reviewer summary for session audit")
+    parser.add_argument(
+        "--architecture-impact",
+        default="",
+        help="Architecture impact summary for root ARCHITECTURE.md and Harness framework architecture",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     try:

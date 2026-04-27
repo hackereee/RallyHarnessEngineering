@@ -227,7 +227,8 @@ L0/L1 工作流完成的判定：
 2. `work/plans/active/` 没有残留 active plan 目录。
 3. 当前 workflow 已进入 `reviewing/reviewer` gate。
 4. session 审计记录包含 verification evidence 与 review summary。
-5. `workflowStatus` 经 `complete-workflow.py` / `state-write.py` 流转至 `completed`，`nextAction` 被替换为下一个 workflow 的初始动作。
+5. session 审计记录包含 architecture impact summary，说明 root `ARCHITECTURE.md` 与 Harness framework architecture 是否已更新或为何无需更新。
+6. `workflowStatus` 经 `complete-workflow.py` / `state-write.py` 流转至 `completed`，`nextAction` 被替换为下一个 workflow 的初始动作。
 
 开启下一个 workflow 的判定：
 
@@ -250,17 +251,38 @@ L0/L1 工作流完成的判定：
 
 ---
 
-## 9. 与 handoff、archive 的衔接
+## 9. Architecture Impact Gate
+
+Architecture Impact 是 workflow gate，不是 standalone task。它要求 Agent 在计划、review、completion / closure 时判断本次工作是否让架构文档失真。
+
+判断边界：
+
+- 目标项目业务模块、依赖、数据流、运行拓扑、外部接口或项目边界变化时，检查 root `ARCHITECTURE.md` 是否需要更新。
+- Harness schema、rules、scripts、templates、skills、生命周期模型或 `.harness/` 框架边界变化时，检查 `.harness/ARCHITECTURE.md` 与 `harness-design/architecture.md` 是否需要更新。
+- `work/` 下 workflow-state、plan、tasks、handoff、session 审计只属于运行态或审计证据；除非改变了生命周期规则本身，否则不构成架构文档更新理由。
+
+写入边界：
+
+- L2/L3 planning：`plan.md` 必须有 `Architecture Impact`，记录预期影响。
+- L2/L3 task review：review checks 必须覆盖实际 Architecture Impact，发现文档失真时应作为 blocking finding，除非有明确 deferReason。
+- L2/L3 archiving：`closure.md` 必须有 `Architecture Impact`，记录最终更新或不更新的理由；`archive-plan.py` 只校验章节存在，不判断语义质量。
+- L0/L1 completion：`complete-workflow.py` 必须记录 architecture impact summary 到 session completion audit。
+
+只有当更新架构文档本身是具体交付产物时，才允许把它建成 task；禁止创建只用于“判断是否需要更新架构”的流程 task。
+
+---
+
+## 10. 与 handoff、archive 的衔接
 
 - 阶段转换、活跃任务切换、等级升降级 —— 三者必须在 `handoff.md` 中追加一条记录；记录格式见 `.harness/rules/handoff-rules.md`。
 - `session-start.py` 写入的 session 文件只作为会话启动证据与 Agent 语义记录容器；它不是 workflow 或 task 真相源，不得用于替代 `workflow-state.nextAction`、`tasks.json` 或 `handoff.md`。
 - `archiving → archived` 的最后一步应先由 Agent 写 `closure.md`，再由 `archive-plan.py` 迁移 `plans/active/<PLAN-ID>/` 到 `plans/archived/<PLAN-ID>/` 并经 `state-write.py` 将 `workflowStatus` 置为 `archived`。
-- L0/L1 无 plan，跳过 plan 迁移与 `closure.md`，通过 `complete-workflow.py` 将 workflow 收到 `completed`，并在 session 审计 JSONL 中记录 verification evidence 与 review summary。
+- L0/L1 无 plan，跳过 plan 迁移与 `closure.md`，通过 `complete-workflow.py` 将 workflow 收到 `completed`，并在 session 审计 JSONL 中记录 verification evidence、review summary 与 architecture impact summary。
 - `completed` / `archived` 不是继续执行的 phase；下一项工作必须经 `start-workflow.py` 创建新的 workflowId 后再推进。
 
 ---
 
-## 10. 违规处理速查
+## 11. 违规处理速查
 
 | 违规 | 触发位置 | 处理方式 |
 |---|---|---|

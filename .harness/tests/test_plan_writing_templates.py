@@ -15,6 +15,7 @@ from jsonschema import Draft202012Validator
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PLAN_TEMPLATE = REPO_ROOT / ".harness" / "templates" / "plan.template.md"
 HANDOFF_TEMPLATE = REPO_ROOT / ".harness" / "templates" / "handoff.template.md"
+CLOSURE_TEMPLATE = REPO_ROOT / ".harness" / "templates" / "closure.template.md"
 PLAN_WRITING_SKILL = REPO_ROOT / ".harness" / "skills" / "plan-writing" / "SKILL.md"
 MATERIALIZE = REPO_ROOT / ".harness" / "scripts" / "materialize-tasks.py"
 TASKS_SCHEMA = REPO_ROOT / ".harness" / "schemas" / "tasks.schema.json"
@@ -81,6 +82,21 @@ class PlanWritingTemplatesTest(unittest.TestCase):
         self.assertIn("Plan Review Gate", text)
         self.assertIn("Status: passed", text)
         self.assertIn("before running `materialize-tasks.py`", text)
+
+    def test_plan_template_records_expected_architecture_impact(self) -> None:
+        text = PLAN_TEMPLATE.read_text(encoding="utf-8")
+
+        self.assertIn("## Architecture Impact", text)
+        self.assertIn("target project architecture", text)
+        self.assertIn("Harness framework architecture", text)
+        self.assertIn("not a standalone task", text)
+
+    def test_closure_template_records_final_architecture_impact(self) -> None:
+        text = CLOSURE_TEMPLATE.read_text(encoding="utf-8")
+
+        self.assertIn("## Architecture Impact", text)
+        self.assertIn("Target project architecture", text)
+        self.assertIn("Harness framework architecture", text)
 
 
 if __name__ == "__main__":

@@ -36,6 +36,12 @@ The plan is split by contract boundary: schema/template first, parser/materializ
 
 Run the task schema and materialization tests after any change to the task contract, parser, or template. Run workflow-state validation tests after lifecycle wording or state shape changes.
 
+## Architecture Impact
+
+- Expected target project architecture impact: state whether root `ARCHITECTURE.md` is unchanged or must be updated.
+- Expected Harness framework architecture impact: state whether `.harness/ARCHITECTURE.md`, `harness-design/architecture.md`, or Harness rules/templates/scripts/skills must be updated.
+- This is a workflow gate record, not a standalone task. Only create a task when updating architecture documentation is itself a concrete deliverable.
+
 ## Risks and Open Questions
 
 - Risk: A future change may revise the `review` rubric or threshold; update schema, template, lifecycle rules, scripts, tests, and this plan template together.

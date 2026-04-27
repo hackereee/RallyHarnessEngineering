@@ -179,6 +179,8 @@ class CompleteWorkflowTest(unittest.TestCase):
                 "python3 .harness/tests/test_validate_state.py",
                 "--review-summary",
                 "Review passed for the L1 workflow.",
+                "--architecture-impact",
+                "Target project architecture unchanged; Harness framework architecture unchanged.",
             )
 
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
@@ -200,6 +202,29 @@ class CompleteWorkflowTest(unittest.TestCase):
                 ["python3 .harness/tests/test_validate_state.py"],
             )
             self.assertEqual(audit["reviewSummary"], "Review passed for the L1 workflow.")
+            self.assertEqual(
+                audit["architectureImpact"],
+                "Target project architecture unchanged; Harness framework architecture unchanged.",
+            )
+
+    def test_rejects_missing_architecture_impact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+            state_path = self.write_state(root, direct_reviewing_state())
+            original = state_path.read_text(encoding="utf-8")
+
+            result = self.run_complete(
+                root,
+                "--verification-check",
+                "direct workflow verification passed",
+                "--review-summary",
+                "Review passed.",
+            )
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("architecture impact", result.stderr + result.stdout)
+            self.assertEqual(state_path.read_text(encoding="utf-8"), original)
 
     def test_rejects_plan_backed_workflow_without_moving_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -215,6 +240,8 @@ class CompleteWorkflowTest(unittest.TestCase):
                 "planned workflow verification passed",
                 "--review-summary",
                 "Review passed.",
+                "--architecture-impact",
+                "Planned workflow architecture impact belongs in closure.md.",
             )
 
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)

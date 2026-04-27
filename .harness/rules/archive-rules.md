@@ -22,7 +22,7 @@ L0/L1 没有 active plan package，不能使用 `archive-plan.py`。L0/L1 的收
 - `workflow-state.activeTaskId != null`。
 - `workflow-state.activePlanRef` 不指向目标 active plan 的 `plan.md`。
 - active plan package 缺少 `plan.md`、`tasks.json`、`handoff.md` 或 `closure.md`。
-- `closure.md` 缺少 `Delivered`、`Verification Evidence`、`Review Summary`、`Deviations`、`Follow-ups` 中任一章节。
+- `closure.md` 缺少 `Delivered`、`Verification Evidence`、`Review Summary`、`Architecture Impact`、`Deviations`、`Follow-ups` 中任一章节。
 - `tasks.json` 中存在非 `done` task。
 - `work/plans/archived/<PLAN-ID>/` 已存在。
 
@@ -32,7 +32,7 @@ L0/L1 没有 active plan package，不能使用 `archive-plan.py`。L0/L1 的收
 
 1. `lifecycle-transaction.py review-passed` 将当前 task 置为 `done`，并把 workflow 置为 `currentPhase=archiving`。
 2. 立即运行 `commit-task.py --task <TASK-ID>`，提交该 task 的交付内容、done 状态、handoff 记录与 archiving state。
-3. Agent 写入 `closure.md`。
+3. Agent 写入 `closure.md`，其中 `Architecture Impact` 必须记录 root `ARCHITECTURE.md` 与 Harness framework architecture 是否已更新或为何无需更新。
 4. 运行 `archive-plan.py PLAN-001`。
 
 `archive-plan.py PLAN-001` 的标准动作：
@@ -58,14 +58,14 @@ L0/L1 没有 active plan package，不能使用 `archive-plan.py`。L0/L1 的收
 1. 要求 `workflow-state.activePlanRef = null` 且 `workflow-state.activeTaskId = null`。
 2. 要求 `work/plans/active/` 不存在 active plan 目录。
 3. 要求当前 direct workflow 处于 `currentPhase=reviewing`、`ownerRole=reviewer`，表示 testing/review gate 已走到最终评审。
-4. 要求调用方提供至少一条 verification command 或 check，并提供 review summary。
+4. 要求调用方提供至少一条 verification command 或 check，并提供 review summary 与 architecture impact summary。
 5. 运行 `lint-harness.py` 与 `validate-state.py`。
 6. 通过 `state-write.py` 设置：
    - `workflowStatus = "completed"`
    - `activePlanRef = null`
    - `activeTaskId = null`
    - `nextAction = "开启下一个 workflow"`
-7. 将 completion evidence 追加到 `work/sessions/YYYY-MM-DD/workflow-completions.jsonl`。
+7. 将 completion evidence、review summary 与 architecture impact summary 追加到 `work/sessions/YYYY-MM-DD/workflow-completions.jsonl`。
 8. 再次运行 `lint-harness.py` 与 `validate-state.py`。
 
 `workflowStatus = "completed"` 是 direct workflow 终态。再次进入 `active` 必须通过 `start-workflow.py` / `state-write.py --allow-terminal-reset` 创建新的 `workflowId`；禁止仅用局部 `workflowStatus` patch 继续旧 workflow。

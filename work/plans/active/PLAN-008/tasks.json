@@ -1,0 +1,75 @@
+{
+  "$schema": "../../../../.harness/schemas/tasks.schema.json",
+  "planId": "PLAN-008",
+  "planRef": "./plan.md",
+  "tasks": [
+    {
+      "taskId": "TASK-001",
+      "title": "Add architecture impact gate",
+      "planSection": "task-001-add-architecture-impact-gate",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [],
+      "files": {
+        "create": [],
+        "modify": [
+          ".harness/rules/workflow-lifecycle.md",
+          ".harness/rules/archive-rules.md",
+          ".harness/ARCHITECTURE.md",
+          "harness-design/architecture.md",
+          ".harness/templates/plan.template.md",
+          ".harness/templates/closure.template.md",
+          ".harness/skills/plan-writing/SKILL.md",
+          ".harness/skills/task-review/SKILL.md",
+          ".harness/scripts/complete-workflow.py",
+          ".harness/scripts/archive-plan.py",
+          ".harness/tests/test_complete_workflow.py",
+          ".harness/tests/test_archive_plan.py",
+          ".harness/tests/test_plan_writing_templates.py"
+        ],
+        "test": []
+      },
+      "acceptance": [
+        "Planning templates include an `Architecture Impact` section that distinguishes target project architecture from Harness framework architecture.",
+        "Task review guidance requires checking whether changed files make architecture documents stale.",
+        "L0/L1 completion requires and records architecture impact evidence.",
+        "L2/L3 closure requires an `Architecture Impact` section before archive.",
+        "Rules state that architecture impact is a workflow gate, not a standalone task."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_plan_writing_templates.py",
+          "python3 .harness/tests/test_complete_workflow.py",
+          "python3 .harness/tests/test_archive_plan.py",
+          "python3 .harness/scripts/lint-harness.py --root .",
+          "python3 .harness/scripts/validate-state.py --state work/workflow-state.json --schema .harness/schemas/workflow-state.schema.json",
+          "python3 -m unittest discover -s .harness/tests -p 'test_*.py'"
+        ],
+        "checks": [
+          "RED confirmed the new tests failed before implementation"
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 94,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "verification evidence is present",
+          "architecture impact is modeled as a workflow gate",
+          "L0/L1 completion records architecture impact evidence",
+          "L2/L3 closure requires Architecture Impact before archive",
+          "framework architecture documentation is synchronized",
+          "lifecycle invariants hold"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-27/session-PLAN-008-TASK-001-review.md"
+      },
+      "blockedReason": ""
+    }
+  ]
+}
