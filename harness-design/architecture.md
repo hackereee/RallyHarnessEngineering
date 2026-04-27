@@ -33,6 +33,7 @@ repo/
 │  │     └─ SKILL.md           # 生成 L2/L3 active plan package 的 repo-local skill
 │  │
 │  ├─ scripts/                  # 自动化脚本，统一子命令入口
+│  │  ├─ harness                # 统一 CLI 入口，薄分发到现有脚本
 │  │  ├─ session-start.py       # 会话启动 preflight、首次 state bootstrap、审计快照
 │  │  ├─ validate-state.py
 │  │  ├─ materialize-tasks.py   # 从 plan.md 任务契约生成 tasks.json
@@ -120,6 +121,7 @@ repo/
 - **`plan-writing/SKILL.md`**：将需求、backlog item 或已确认设计转成 L2/L3 active plan package；使用 `plan.template.md` 与 `materialize-tasks.py`，但不激活 task、不写 `workflow-state.json`。
 
 ### `.harness/scripts/`
+- **`harness`**：统一 CLI 入口。它只做参数归一和薄分发，不重新实现生命周期逻辑；`validate-state` 子命令默认校验 `work/workflow-state.json`。
 - **`session-start.py`**：会话启动编排器。执行 Harness 关键工件检查、环境检查、`lint-harness.py`、首次 `workflow-state.json` bootstrap、`validate-state.py`，并写入 `work/sessions/YYYY-MM-DD/session-<id>.md` 审计快照。它只允许在 `workflow-state.json` 缺失且没有 active plan 时创建首个 state；不得修改已有 state，不得激活 task，不得推进 phase。
 - **`validate-state.py`**：三层校验——JSON Schema → 跨文件（`activeTaskId ∈ tasks.json`）→ 语义启发式。
 - **`materialize-tasks.py`**：从已确认的 `plan.md` 任务契约区块生成 `tasks.json`，并校验 schema、taskId、anchor、dependsOn、文件边界、acceptance 与 verification；只写 plan 目录内的 `tasks.json`，不激活 task，不写 `workflow-state.json`。
@@ -135,7 +137,6 @@ repo/
 - **`test_*.py`**：Harness 契约、脚本与模板的回归测试。测试与生产脚本分目录存放，避免 `.harness/scripts/` 同时承担工具入口与测试集合两种职责。
 
 规划中的 lifecycle 工具：
-- **`harness`**：统一入口，子命令分发。例：`harness validate-state`、`harness archive-plan PLAN-001`。
 - **`check-env.py`**：校验依赖（`python`、`jsonschema`、`git` 等）。失败不阻塞，只把报告交给 Agent 决策。
 - **`lint-harness.py`**：目录结构与不变量巡检（如"`plans/active/` 下至多一个目录"）。
 
@@ -154,6 +155,6 @@ repo/
 1. **单活跃 plan**：`work/plans/active/` 任意时刻至多一个目录；当前由规则与 `lint-harness.py` 强制。
 2. **schema-first**：凡能用 schema 表达的约束一律落到 `.harness/schemas/`，`.harness/rules/` 不得重复。
 3. **路径对称**：active 与 archived 的 plan 路径只差一段（`active` ↔ `archived`），方便脚本机械迁移。
-4. **入口唯一**：最终脚本对外统一走 `.harness/scripts/harness <subcmd>`；当前已落地脚本仍可直接运行。
+4. **入口统一**：常规外部调用走 `.harness/scripts/harness <subcmd>`；底层脚本保持可直接运行，供测试、调试和脚本编排使用。
 5. **运行态可清**：`rm -rf work/` 只回到初始态，不损坏 Harness 自身。
 6. **单写者**：`workflow-state.json` 的已有状态仅由 `state-write.py` 更新；`session-start.py` 只允许在 state 缺失且没有 active plan 时从模板创建首个 state。其他脚本若需修改 state，必须输出 patch 并经 `state-write.py` 落盘。`lint-harness.py` 会扫描生产脚本中对该文件的直接写操作（如 `open(..., 'w')`、`Path.write_text(...)` 指向该路径）并视为违规。
