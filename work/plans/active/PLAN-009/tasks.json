@@ -1,0 +1,158 @@
+{
+  "$schema": "../../../../.harness/schemas/tasks.schema.json",
+  "planId": "PLAN-009",
+  "planRef": "./plan.md",
+  "tasks": [
+    {
+      "taskId": "TASK-001",
+      "title": "Strengthen project-init workflow integration guidance",
+      "planSection": "task-001-strengthen-project-init-skill",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [],
+      "files": {
+        "create": [],
+        "modify": [
+          ".harness/skills/project-init/SKILL.md"
+        ],
+        "test": [
+          ".harness/tests/test_project_init_skill.py"
+        ]
+      },
+      "acceptance": [
+        "The skill requires reading all detected entrypoints before workflow conclusions.",
+        "The skill defines workflow mapping from target project rules to Harness phases and gates.",
+        "The skill requires conflict reporting before modifying user-owned prose.",
+        "The skill states that semantic conflict judgment belongs to the LLM, not `init-project-entrypoint.py`.",
+        "The skill keeps project environment commands delegated to `project-env-contract`."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_project_init_skill.py"
+        ],
+        "checks": [
+          "rg -n \"Workflow Integration Review|testing.*gate|reviewing|state-write.py|project-env-contract\" .harness/skills/project-init/SKILL.md .harness/tests/test_project_init_skill.py"
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 92,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "verification evidence is present and relevant",
+          "file boundaries are respected",
+          "lifecycle invariants hold",
+          "architecture impact is deferred to TASK-003 by plan"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-28/session-PLAN-009-TASK-001-review.md"
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-002",
+      "title": "Version and update the managed block",
+      "planSection": "task-002-version-and-update-managed-block",
+      "status": "implementing",
+      "currentStep": "Activated by lifecycle transaction",
+      "nextAction": "执行 TASK-002",
+      "ownerRole": "developer",
+      "dependsOn": [
+        "TASK-001"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          ".harness/scripts/init-project-entrypoint.py",
+          ".harness/schemas/project-entrypoints.schema.json",
+          ".harness/templates/project-entrypoints.template.json"
+        ],
+        "test": [
+          ".harness/tests/test_init_project_entrypoint.py",
+          ".harness/tests/test_project_entrypoints_schema.py"
+        ]
+      },
+      "acceptance": [
+        "Managed block content includes read order, conflict priority, workflow mapping, truth sources, write gateways, and task modeling boundaries.",
+        "The script still modifies only the managed block.",
+        "The script remains idempotent when run twice.",
+        "The contract records deterministic block version/profile metadata.",
+        "The schema and template validate the new metadata.",
+        "Existing entrypoint prose outside the markers remains unchanged."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_init_project_entrypoint.py",
+          "python3 .harness/tests/test_project_entrypoints_schema.py"
+        ],
+        "checks": [
+          "a fixture with an old block is replaced exactly once and user prose before/after the block is preserved."
+        ],
+        "lastResult": "not_run"
+      },
+      "review": {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": ""
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-003",
+      "title": "Document the entrypoint integration boundary",
+      "planSection": "task-003-document-entrypoint-integration-boundary",
+      "status": "idle",
+      "currentStep": "",
+      "nextAction": "",
+      "ownerRole": "developer",
+      "dependsOn": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          ".harness/ARCHITECTURE.md"
+        ],
+        "test": [
+          ".harness/tests/test_project_init_skill.py"
+        ]
+      },
+      "acceptance": [
+        "`.harness/ARCHITECTURE.md` documents target agent entrypoint integration as a workflow mapping layer.",
+        "It states that root `ARCHITECTURE.md` remains target project business architecture.",
+        "It states that `.harness/ARCHITECTURE.md` remains Harness framework architecture.",
+        "It states that `project-entrypoints.json` is deterministic entrypoint metadata, not a semantic conflict report.",
+        "It avoids references to removed `harness-design/architecture.md`."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_project_init_skill.py",
+          "python3 .harness/scripts/lint-harness.py --root .",
+          "python3 .harness/scripts/validate-state.py --state work/workflow-state.json --schema .harness/schemas/workflow-state.schema.json"
+        ],
+        "checks": [],
+        "lastResult": "not_run"
+      },
+      "review": {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": ""
+      },
+      "blockedReason": ""
+    }
+  ]
+}

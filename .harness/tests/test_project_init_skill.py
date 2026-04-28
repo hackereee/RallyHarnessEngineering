@@ -65,6 +65,36 @@ class ProjectInitSkillTest(unittest.TestCase):
         self.assertIn(".harness/contracts/project-contracts.json", text)
         self.assertNotIn("Write project contracts before custom scripts or adapters.", text)
 
+    def test_requires_workflow_integration_review_across_all_entrypoints(self) -> None:
+        text = self.read_skill()
+
+        self.assertIn("## Workflow Integration Review", text)
+        self.assertIn("read all detected entrypoints", text)
+        self.assertIn("before workflow conclusions", text)
+        self.assertIn("CLAUDE.md", text)
+        self.assertIn("GEMINI.md", text)
+        self.assertIn(".github/copilot-instructions.md", text)
+
+    def test_maps_target_workflow_rules_to_harness_gates(self) -> None:
+        text = self.read_skill()
+
+        self.assertIn("planning maps to `planning`", text)
+        self.assertIn("development maps to `implementing`", text)
+        self.assertIn("tests map to the `testing` gate", text)
+        self.assertIn("reviews map to the `reviewing` gate", text)
+        self.assertIn("commit-task.py", text)
+        self.assertIn("archive-plan.py", text)
+        self.assertIn("backlog-intake.py", text)
+
+    def test_conflicts_are_reported_before_user_prose_changes(self) -> None:
+        text = self.read_skill()
+
+        self.assertIn("report conflicts before modifying user-owned prose", text)
+        self.assertIn("semantic conflict judgment belongs to the LLM, not `init-project-entrypoint.py`", text)
+        self.assertIn("Do not parse freeform entrypoint prose in deterministic scripts", text)
+        self.assertIn("state-write.py", text)
+        self.assertIn("update-task.py", text)
+
     def test_architecture_documents_project_init_skill_boundary(self) -> None:
         text = HARNESS_ARCHITECTURE.read_text(encoding="utf-8")
 
