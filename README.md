@@ -164,9 +164,12 @@ harness-engineering check <target>
 ```bash
 python3 -m build
 python3 installer/release/check_artifacts.py dist
+python3 installer/release/smoke_install.py dist
 ```
 
-该检查只验证本地 `dist/` 中的 wheel、sdist、metadata、console script、依赖和 `.harness/` payload，不发布包、不读取 registry credentials。
+该检查只验证本地 `dist/` 中的 wheel、sdist、metadata、console script、依赖、`.harness/` payload 和安装后的 CLI 行为，不发布包、不读取 registry credentials。
+
+手动发布入口是 `.github/workflows/publish-python-package.yml`。完整 registry 操作、TestPyPI 验证、PyPI promotion、安装/升级命令和 yank/rollback 指南见 `docs/release/package-registry-release.md`。
 
 在 PyPI 发布完成前，本仓库内的运行时工作仍以 `.harness/scripts/harness` 为稳定入口；安装器 CLI 仍只负责复制、更新和检查固定 Harness 资产。
 
@@ -340,9 +343,12 @@ Before publishing to TestPyPI or PyPI, build locally and run artifact inspection
 ```bash
 python3 -m build
 python3 installer/release/check_artifacts.py dist
+python3 installer/release/smoke_install.py dist
 ```
 
-This check only validates the local `dist/` wheel, sdist, metadata, console script, dependency declaration, and bundled `.harness/` payload. It does not publish a package or read registry credentials.
+This check only validates the local `dist/` wheel, sdist, metadata, console script, dependency declaration, bundled `.harness/` payload, and installed CLI behavior. It does not publish a package or read registry credentials.
+
+The manual publish entrypoint is `.github/workflows/publish-python-package.yml`. Full registry operation, TestPyPI validation, PyPI promotion, install/upgrade commands, and yank/rollback guidance live in `docs/release/package-registry-release.md`.
 
 Until PyPI publication is complete, `.harness/scripts/harness` remains the stable runtime entrypoint inside this repository. The installer CLI is responsible only for copying, updating, and checking fixed Harness assets.
 

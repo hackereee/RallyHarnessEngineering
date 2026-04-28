@@ -38,6 +38,8 @@ python3 installer/release/smoke_install.py dist
 
 The smoke gate installs the local wheel into a temporary virtual environment, runs the installed `harness-engineering` command against a temporary target repository, verifies that `install --dry-run` writes nothing, confirms install/check success, and confirms `update` prunes retired installer assets. This is a package release gate, not a Harness runtime workflow gate.
 
+Manual publication is defined in `.github/workflows/publish-python-package.yml`. Operator steps for Trusted Publisher setup, TestPyPI validation, PyPI promotion, install/upgrade commands, and yank/rollback recovery are documented in `docs/release/package-registry-release.md`.
+
 ## Ordered Installer Handoff
 
 1. Release fixed Harness assets

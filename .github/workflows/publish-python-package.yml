@@ -1,0 +1,90 @@
+name: Publish Python Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: "Package registry to publish to"
+        required: true
+        type: choice
+        default: testpypi
+        options:
+          - testpypi
+          - pypi
+
+jobs:
+  build-and-check:
+    name: Build and check package artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python3 -m pip install --upgrade build
+
+      - name: Run installer tests
+        run: python3 -m unittest discover -s installer/tests -p 'test_*.py'
+
+      - name: Build distributions
+        run: python3 -m build
+
+      - name: Inspect release artifacts
+        run: python3 installer/release/check_artifacts.py dist
+
+      - name: Smoke test installed wheel
+        run: python3 installer/release/smoke_install.py dist
+
+      - name: Upload checked distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: build-and-check
+    if: ${{ inputs.registry == 'testpypi' }}
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download checked distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-dist
+          path: dist
+
+      - name: Publish package distributions to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build-and-check
+    if: ${{ inputs.registry == 'pypi' }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download checked distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-dist
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
