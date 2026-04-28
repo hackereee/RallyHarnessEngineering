@@ -11,7 +11,7 @@ L0/L1 没有 active plan package，不能使用 `archive-plan.py`。L0/L1 的收
 - `workflow-state.json` 仍只能经 `state-write.py` 写入；terminal close 必须由 `complete-workflow.py` 或 `archive-plan.py` 调用 `state-write.py --allow-terminal-close` 完成。
 - `tasks.json` 在归档阶段不再修改；所有 task 必须已经是 `done`。
 - 进入 `archiving` 后，必须先对刚完成的 task 运行 `commit-task.py --task <TASK-ID>`，再编写 `closure.md` 和执行 `archive-plan.py`；task 完成提交与归档提交是两个不同边界。
-- `archive-plan.py` 接受仓库内路径作为 `--root`，但必须先规范化到 Git 顶层，并在归档前按该顶层 worktree 确认除 `work/plans/active/<PLAN-ID>/closure.md` 外没有未提交变化；若还有代码、`tasks.json`、`workflow-state.json`、`handoff.md` 或 session evidence 未提交，说明 task completion commit gate 未闭环，必须阻断。
+- `archive-plan.py` 接受 Harness root 内路径作为 `--root`，并以该 root 定位 `.harness/` 与 `work/`；Git 顶层允许位于 Harness root 的父目录，脚本在归档前按 Git worktree 确认除当前 plan 的 `closure.md` 外没有未提交变化。若还有代码、`tasks.json`、`workflow-state.json`、`handoff.md` 或 session evidence 未提交，说明 task completion commit gate 未闭环，必须阻断。
 - L0/L1 completion 不迁移目录、不生成 `closure.md`，但必须提供 verification evidence 与 review summary。
 
 ## 归档前置条件

@@ -132,23 +132,43 @@ def validate_closure(path: Path) -> None:
         raise ArchiveError(f"closure.md 缺少必要章节: {', '.join(missing)}")
 
 
-def ensure_git_root(root: Path) -> None:
+def find_harness_root(root: Path) -> Path:
+    candidate = root.resolve()
+    if candidate.is_file():
+        candidate = candidate.parent
+
+    for current in (candidate, *candidate.parents):
+        if (current / ".harness" / "scripts" / "lint-harness.py").exists() and (current / "work").exists():
+            return current
+
+    raise ArchiveError(f"无法从 {root} 定位 Harness root；需要位于包含 .harness/ 与 work/ 的目录内")
+
+
+def git_top_level(root: Path) -> Path:
     rc, output = run_command(["git", "rev-parse", "--show-toplevel"], root)
     if rc != 0:
         raise ArchiveError(f"archive-plan 需要 Git 仓库以验证 commit-task gate:\n{output}")
-    if Path(output.strip()).resolve() != root.resolve():
-        raise ArchiveError(f"--root 必须是 Git 顶层目录: {root}")
-
-
-def normalize_root(root: Path) -> Path:
-    rc, output = run_command(["git", "rev-parse", "--show-toplevel"], root)
-    if rc != 0:
-        raise ArchiveError(f"archive-plan 需要 Git 仓库以定位 Harness root:\n{output}")
     return Path(output.strip()).resolve()
 
 
-def changed_paths(root: Path) -> list[str]:
-    output = run_checked("git status", ["git", "status", "--porcelain"], root)
+def normalize_root(root: Path) -> Path:
+    harness_root = find_harness_root(root)
+    git_top_level(harness_root)
+    return harness_root
+
+
+def path_relative_to_git(path: Path, git_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(git_root.resolve()).as_posix()
+    except ValueError as exc:
+        raise ArchiveError(f"路径不在 Git worktree 内: {path}") from exc
+
+
+def changed_paths(git_root: Path) -> list[str]:
+    proc = subprocess.run(["git", "status", "--porcelain"], cwd=git_root, text=True, capture_output=True)
+    output = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode != 0:
+        raise ArchiveError(f"git status 失败:\n{output.strip()}")
     paths: list[str] = []
     for line in output.splitlines():
         if not line:
@@ -162,9 +182,9 @@ def changed_paths(root: Path) -> list[str]:
 
 
 def validate_commit_task_gate(root: Path, plan_id: str) -> None:
-    ensure_git_root(root)
-    allowed = {f"work/plans/active/{plan_id}/closure.md"}
-    dirty = [path for path in changed_paths(root) if path not in allowed]
+    git_root = git_top_level(root)
+    allowed = {path_relative_to_git(root / "work" / "plans" / "active" / plan_id / "closure.md", git_root)}
+    dirty = [path for path in changed_paths(git_root) if path not in allowed]
     if dirty:
         formatted = ", ".join(dirty)
         raise ArchiveError(
@@ -278,7 +298,7 @@ def archive(root: Path, plan_id: str) -> dict:
 def main(argv: Iterable[str] | None = None) -> int:
     repo_root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description="Archive a completed Harness active plan")
-    parser.add_argument("--root", type=Path, default=repo_root, help="Path inside repository; normalized to Git top-level")
+    parser.add_argument("--root", type=Path, default=repo_root, help="Path inside Harness root; Git top-level may be a parent")
     parser.add_argument("plan_id", help="Plan id, e.g. PLAN-001")
     args = parser.parse_args(list(argv) if argv is not None else None)
 
