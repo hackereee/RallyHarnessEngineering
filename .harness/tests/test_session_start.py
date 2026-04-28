@@ -93,6 +93,7 @@ class SessionStartTest(unittest.TestCase):
             ".harness/schemas/workflow-state.schema.json",
             ".harness/schemas/tasks.schema.json",
             ".harness/schemas/backlogs.schema.json",
+            ".harness/schemas/backlog-consumption-event.schema.json",
             ".harness/schemas/project-contracts.schema.json",
             ".harness/schemas/project-entrypoints.schema.json",
             ".harness/templates/workflow-state.template.json",
@@ -124,6 +125,7 @@ class SessionStartTest(unittest.TestCase):
             ".harness/scripts/archive-plan.py",
             ".harness/scripts/complete-workflow.py",
             ".harness/scripts/backlog-intake.py",
+            ".harness/scripts/backlog-consume.py",
             ".harness/scripts/check-project-env.py",
             ".harness/scripts/init-project-entrypoint.py",
             ".harness/scripts/harness",
@@ -251,6 +253,23 @@ class SessionStartTest(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
             self.assertIn(".harness/rules/backlog-rules.md", result.stderr + result.stdout)
+            self.assertFalse((root / "work" / "workflow-state.json").exists())
+
+    def test_missing_backlog_consumption_assets_are_blocked_by_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+            for relative in (
+                ".harness/schemas/backlog-consumption-event.schema.json",
+                ".harness/scripts/backlog-consume.py",
+            ):
+                (root / relative).unlink()
+
+            result = self.run_session_start(root)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn(".harness/schemas/backlog-consumption-event.schema.json", result.stderr + result.stdout)
+            self.assertIn(".harness/scripts/backlog-consume.py", result.stderr + result.stdout)
             self.assertFalse((root / "work" / "workflow-state.json").exists())
 
     def test_missing_handoff_and_session_rule_assets_are_blocked_by_preflight(self) -> None:

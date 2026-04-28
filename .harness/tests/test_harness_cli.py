@@ -34,6 +34,7 @@ class HarnessCliTest(unittest.TestCase):
             ".harness/schemas/workflow-state.schema.json",
             ".harness/schemas/tasks.schema.json",
             ".harness/schemas/backlogs.schema.json",
+            ".harness/schemas/backlog-consumption-event.schema.json",
             ".harness/schemas/project-contracts.schema.json",
             ".harness/schemas/project-entrypoints.schema.json",
             ".harness/templates/backlogs.template.json",
@@ -49,6 +50,7 @@ class HarnessCliTest(unittest.TestCase):
             ".harness/scripts/archive-plan.py",
             ".harness/scripts/complete-workflow.py",
             ".harness/scripts/backlog-intake.py",
+            ".harness/scripts/backlog-consume.py",
             ".harness/scripts/check-project-env.py",
             ".harness/scripts/init-project-entrypoint.py",
         ):
@@ -117,6 +119,7 @@ class HarnessCliTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertIn("backlog-intake", result.stdout)
+        self.assertIn("backlog-consume", result.stdout)
         self.assertIn("commit-task", result.stdout)
         self.assertIn("check-project-env", result.stdout)
         self.assertIn("init-entrypoint", result.stdout)
@@ -176,6 +179,16 @@ class HarnessCliTest(unittest.TestCase):
             self.assertIn('"id": "BL-001"', result.stdout)
             store = json.loads((root / "work" / "backlog" / "backlogs.json").read_text(encoding="utf-8"))
             self.assertEqual(store["items"][0]["title"], "Queued follow-up")
+
+    def test_backlog_consume_help_delegates_to_backlog_consume_script(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.write_harness_assets(root)
+
+            result = self.run_harness(root, "backlog-consume", "--help")
+
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn("Consume a pending Harness backlog item", result.stdout)
 
 
 if __name__ == "__main__":

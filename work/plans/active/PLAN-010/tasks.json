@@ -118,10 +118,10 @@
       "taskId": "TASK-003",
       "title": "CLI, session assets, and documentation",
       "planSection": "task-003-cli-session-docs",
-      "status": "implementing",
-      "currentStep": "Activated by lifecycle transaction",
-      "nextAction": "执行 TASK-003",
-      "ownerRole": "developer",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
       "dependsOn": [
         "TASK-001",
         "TASK-002"
@@ -156,15 +156,21 @@
           "python3 .harness/scripts/lint-harness.py --root .",
           "python3 .harness/scripts/validate-state.py --state work/workflow-state.json --schema .harness/schemas/workflow-state.schema.json"
         ],
-        "checks": [],
-        "lastResult": "not_run"
+        "checks": [
+          "docs describe backlogs.json as pending queue and consumed.jsonl as audit log"
+        ],
+        "lastResult": "passed"
       },
       "review": {
-        "score": 0,
+        "score": 95,
         "threshold": 85,
-        "lastResult": "not_run",
+        "lastResult": "passed",
         "rubricVersion": "review-rubric-v1",
-        "checks": [],
+        "checks": [
+          "CLI exposes and delegates backlog-consume",
+          "session-start requires consumption script and event schema",
+          "docs consistently describe pending queue and consumed audit boundaries"
+        ],
         "findings": [],
         "reportRef": ""
       },

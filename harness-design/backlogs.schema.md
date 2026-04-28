@@ -1,20 +1,23 @@
 # backlogs.schema.md
 
-`backlogs.json` 是 Harness intake-side 运行态数据，正式结构由 `.harness/schemas/backlogs.schema.json` 约束，初始化样例来自 `.harness/templates/backlogs.template.json`。
+`backlogs.json` 是 Harness intake-side pending queue，正式结构由 `.harness/schemas/backlogs.schema.json` 约束，初始化样例来自 `.harness/templates/backlogs.template.json`。它只保存尚未被 workflow 或 plan 接管的 backlog items。
 
 ## 1. 文件位置与职责
 
 - Schema：`.harness/schemas/backlogs.schema.json`
+- Consumption event schema：`.harness/schemas/backlog-consumption-event.schema.json`
 - Template：`.harness/templates/backlogs.template.json`
-- Runtime store：`work/backlog/backlogs.json`
+- Pending queue：`work/backlog/backlogs.json`
+- Consumption audit log：`work/backlog/consumed.jsonl`
 
-`.harness/` 只保存契约和模板，不保存运行态 backlog 数据。`work/backlog/backlogs.json` 只记录 incoming work，不修改 `workflow-state.json`，不激活 plan/task，也不改变当前 workflow phase。
+`.harness/` 只保存契约和模板，不保存运行态 backlog 数据。`work/backlog/backlogs.json` 只记录未消费 incoming work，不修改 `workflow-state.json`，不激活 plan/task，也不改变当前 workflow phase。item 被下游 workflow 或 plan 正式接管后，经 `.harness/scripts/backlog-consume.py` 从 pending queue 删除，并把完整原 item 写入 `work/backlog/consumed.jsonl`。
 
 ## 2. 根对象
 
 根对象包含：
 
 - `$schema`：必填，模板中为 `../schemas/backlogs.schema.json`。
+- `nextId`：必填，正整数；表示下一次 intake 分配的 `BL-NNN` 数字后缀。
 - `items`：必填，backlog 项数组；初始模板为空数组。
 
 示例：
@@ -22,6 +25,7 @@
 ```json
 {
   "$schema": "../schemas/backlogs.schema.json",
+  "nextId": 2,
   "items": [
     {
       "id": "BL-001",
@@ -97,3 +101,29 @@
 - 长度：0-2000
 
 说明：补充备注，不承载状态机语义。
+
+## 4. nextId
+
+- 类型：`integer`
+- 必填：是
+- 最小值：1
+
+说明：`nextId` 是下一条 backlog item 的数字游标。`backlog-intake.py` 必须从 `nextId` 分配 ID 并递增游标，不能从当前 `items` 最大值推导。这样即使 consumed item 已从 pending queue 删除，也不会复用 `BL-NNN`。
+
+旧 store 缺少 `nextId` 时，`backlog-intake.py` 执行一次确定性迁移：`nextId = max(existing BL-NNN) + 1`。
+
+## 5. Consumption Event
+
+`work/backlog/consumed.jsonl` 每行是一个 `.harness/schemas/backlog-consumption-event.schema.json` 校验的 JSON object，记录：
+
+- `eventType = backlog.consumed`
+- `backlogId`
+- `consumedAt`
+- `targetRef`
+- `reason`
+- `item`：完整原 backlog item
+
+`backlog-consume.py` 只能在下游 ownership evidence 已存在时消费 item：
+
+- `plan:<PLAN-ID>`：active plan package 完整、Plan Review Gate passed、`tasks.json` 合法，且 plan 或 handoff 引用了 backlog id 或 `sourceRef`。
+- `workflow:<workflowId>`：workflow state 校验通过、workflowId 匹配、active refs 为空，且 session audit 引用了 backlog id 或 `sourceRef`。
