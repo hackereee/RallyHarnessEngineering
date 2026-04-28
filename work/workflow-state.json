@@ -1,11 +1,11 @@
 {
   "$schema": "../.harness/schemas/workflow-state.schema.json",
-  "workflowId": "workflow-fix-project-init-target-pollution-20260428-v1",
-  "activePlanRef": null,
-  "activeTaskId": null,
-  "workflowStatus": "completed",
-  "currentPhase": "reviewing",
-  "ownerRole": "reviewer",
-  "nextAction": "开启下一个 workflow",
-  "updatedAt": "2026-04-28T17:06:13+08:00"
+  "workflowId": "workflow-plan-013-english-harness-artifacts-v1",
+  "activePlanRef": "./plans/active/PLAN-013/plan.md",
+  "activeTaskId": "TASK-001",
+  "workflowStatus": "active",
+  "currentPhase": "implementing",
+  "ownerRole": "developer",
+  "nextAction": "执行 TASK-001",
+  "updatedAt": "2026-04-29T07:07:05+08:00"
 }

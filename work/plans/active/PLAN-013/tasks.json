@@ -1,0 +1,166 @@
+{
+  "$schema": "../../../../.harness/schemas/tasks.schema.json",
+  "planId": "PLAN-013",
+  "planRef": "./plan.md",
+  "tasks": [
+    {
+      "taskId": "TASK-001",
+      "title": "Normalize framework contract prose",
+      "planSection": "task-001-normalize-framework-contract-prose",
+      "status": "implementing",
+      "currentStep": "Activated by lifecycle transaction",
+      "nextAction": "执行 TASK-001",
+      "ownerRole": "developer",
+      "dependsOn": [],
+      "files": {
+        "create": [],
+        "modify": [
+          ".harness/ARCHITECTURE.md",
+          ".harness/rules/",
+          ".harness/skills/",
+          ".harness/templates/",
+          ".harness/schemas/"
+        ],
+        "test": [
+          ".harness/tests/test_plan_writing_templates.py",
+          ".harness/tests/test_tasks_schema.py",
+          ".harness/tests/test_workflow_state_schema.py"
+        ]
+      },
+      "acceptance": [
+        "Static `.harness` framework prose is English across architecture, rules, skills, templates, and schemas.",
+        "Schema descriptions, `$comment` values, template text, and skill instructions preserve their existing Harness semantics.",
+        "No task, testing, review, backlog, handoff, commit, or archive lifecycle boundary is weakened or moved out of its established layer."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_plan_writing_templates.py",
+          "python3 .harness/tests/test_tasks_schema.py",
+          "python3 .harness/tests/test_workflow_state_schema.py"
+        ],
+        "checks": [
+          "`rg -n \"\\p{Han}\" .harness/ARCHITECTURE.md .harness/rules .harness/skills .harness/templates .harness/schemas` reports no remaining human-facing Chinese prose."
+        ],
+        "lastResult": "not_run"
+      },
+      "review": {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": ""
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-002",
+      "title": "Normalize script diagnostics",
+      "planSection": "task-002-normalize-script-diagnostics",
+      "status": "idle",
+      "currentStep": "",
+      "nextAction": "",
+      "ownerRole": "developer",
+      "dependsOn": [
+        "TASK-001"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          ".harness/scripts/",
+          ".harness/tests/"
+        ],
+        "test": [
+          ".harness/tests/test_validate_state.py",
+          ".harness/tests/test_lint_harness.py",
+          ".harness/tests/test_state_write.py",
+          ".harness/tests/test_harness_cli.py"
+        ]
+      },
+      "acceptance": [
+        "Script comments and docstrings are English.",
+        "CLI help, warnings, errors, success messages, and JSON-facing diagnostic strings are English.",
+        "Existing script gateway responsibilities and side effects are unchanged.",
+        "Tests that assert exact diagnostics are updated to the new English wording without relaxing the behavioral assertions."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_validate_state.py",
+          "python3 .harness/tests/test_lint_harness.py",
+          "python3 .harness/tests/test_state_write.py",
+          "python3 .harness/tests/test_harness_cli.py"
+        ],
+        "checks": [
+          "`rg -n \"\\p{Han}\" .harness/scripts` reports no remaining human-facing Chinese script text."
+        ],
+        "lastResult": "not_run"
+      },
+      "review": {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": ""
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-003",
+      "title": "Add language regression guard",
+      "planSection": "task-003-add-language-regression-guard",
+      "status": "idle",
+      "currentStep": "",
+      "nextAction": "",
+      "ownerRole": "developer",
+      "dependsOn": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "files": {
+        "create": [
+          ".harness/tests/test_language_standardization.py"
+        ],
+        "modify": [
+          ".harness/tests/"
+        ],
+        "test": [
+          ".harness/tests/test_language_standardization.py",
+          ".harness/tests/test_materialize_tasks.py",
+          ".harness/tests/test_lifecycle_transaction.py",
+          ".harness/tests/test_backlog_consume.py"
+        ]
+      },
+      "acceptance": [
+        "A dedicated language-standardization test fails on accidental Chinese human-facing text under `.harness`.",
+        "Existing Harness regression tests pass with English diagnostics and expectations.",
+        "`rg -n \"\\p{Han}\" .harness` has no unexplained matches after the plan completes."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_language_standardization.py",
+          "python3 .harness/tests/test_materialize_tasks.py",
+          "python3 .harness/tests/test_lifecycle_transaction.py",
+          "python3 .harness/tests/test_backlog_consume.py",
+          "python3 .harness/tests/test_lint_harness.py"
+        ],
+        "checks": [
+          "`rg -n \"\\p{Han}\" .harness` reports no remaining unexplained matches."
+        ],
+        "lastResult": "not_run"
+      },
+      "review": {
+        "score": 0,
+        "threshold": 85,
+        "lastResult": "not_run",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [],
+        "findings": [],
+        "reportRef": ""
+      },
+      "blockedReason": ""
+    }
+  ]
+}
