@@ -151,6 +151,72 @@ class CheckProjectEnvTest(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
             self.assertIn("schema validation failed", result.stderr)
 
+    def test_duplicate_command_ids_are_rejected_before_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            contract = self.base_contract()
+            contract["commandRegistry"] = [
+                {
+                    "id": "duplicate-command",
+                    "description": "First command.",
+                    "command": [sys.executable, "-c", "print('first')"],
+                    "evidenceSource": "fixture",
+                },
+                {
+                    "id": "duplicate-command",
+                    "description": "Second command.",
+                    "command": [sys.executable, "-c", "print('second')"],
+                    "evidenceSource": "fixture",
+                },
+            ]
+
+            result = self.run_checker(root, self.write_contract(root, contract))
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("duplicate commandRegistry id", result.stderr)
+
+    def test_unknown_command_ref_is_contract_error_even_for_warning_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            contract = self.base_contract()
+            contract["commandRegistry"] = []
+            contract["environmentChecks"] = [
+                {
+                    "id": "unknown-ref",
+                    "description": "Unknown command reference.",
+                    "severity": "warning",
+                    "evidenceSource": "fixture",
+                    "commandRef": "missing-command",
+                    "expectedResult": "command exists",
+                    "remediation": "Fix commandRef.",
+                }
+            ]
+
+            result = self.run_checker(root, self.write_contract(root, contract))
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("unknown commandRef", result.stderr)
+
+    def test_duplicate_environment_check_ids_are_rejected_before_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            contract = self.base_contract()
+            duplicate_check = {
+                "id": "duplicate-check",
+                "description": "A duplicate check.",
+                "severity": "warning",
+                "evidenceSource": "fixture",
+                "probe": {"type": "path_exists", "path": "missing.txt"},
+                "expectedResult": "missing.txt exists",
+                "remediation": "Create missing.txt.",
+            }
+            contract["environmentChecks"] = [duplicate_check, dict(duplicate_check)]
+
+            result = self.run_checker(root, self.write_contract(root, contract))
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("duplicate environmentChecks id", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

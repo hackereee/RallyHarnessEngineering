@@ -186,6 +186,27 @@ class InitProjectEntrypointTest(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
             self.assertIn("entrypoint not found", result.stderr)
 
+    def test_write_rejects_multiple_existing_managed_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            entry = root / "AGENTS.md"
+            original = (
+                "# Agents\n\n"
+                "<!-- harness-engineering:start -->\n"
+                "first block\n"
+                "<!-- harness-engineering:end -->\n\n"
+                "<!-- harness-engineering:start -->\n"
+                "second block\n"
+                "<!-- harness-engineering:end -->\n"
+            )
+            entry.write_text(original, encoding="utf-8")
+
+            result = self.run_script(root, "--write", "--entry", "AGENTS.md")
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("multiple harness-engineering managed blocks", result.stderr)
+            self.assertEqual(entry.read_text(encoding="utf-8"), original)
+
 
 if __name__ == "__main__":
     unittest.main()

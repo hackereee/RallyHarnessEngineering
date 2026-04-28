@@ -61,6 +61,18 @@ def has_harness_block(text: str) -> bool:
     return START_MARKER in text and END_MARKER in text
 
 
+def ensure_harness_block_is_unique(text: str, entry: str) -> None:
+    start_count = text.count(START_MARKER)
+    end_count = text.count(END_MARKER)
+    if start_count != end_count:
+        raise InitEntrypointError(
+            f"unbalanced harness-engineering managed block markers in {entry}: "
+            f"{start_count} start marker(s), {end_count} end marker(s)"
+        )
+    if start_count > 1:
+        raise InitEntrypointError(f"multiple harness-engineering managed blocks in {entry}")
+
+
 def harness_block_version(text: str) -> str | None:
     if not has_harness_block(text):
         return None
@@ -250,6 +262,7 @@ def write_entrypoint(root: Path, entry: str, *, create: bool) -> dict[str, Any]:
             raise InitEntrypointError(f"entrypoint not found: {entry}")
         text = path.read_text(encoding="utf-8")
 
+    ensure_harness_block_is_unique(text, entry)
     atomic_write_text(path, replace_managed_block(text))
     ensure_project_architecture(root)
 

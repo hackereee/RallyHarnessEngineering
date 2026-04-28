@@ -163,6 +163,23 @@ class MaterializeTasksTest(unittest.TestCase):
             self.assertIn("unknown dependsOn", result.stderr)
             self.assertFalse(out_path.exists())
 
+    def test_rejects_cyclic_dependencies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plan_dir = Path(tmp) / "work" / "plans" / "active" / "PLAN-123"
+            plan_dir.mkdir(parents=True)
+            plan_path = plan_dir / "plan.md"
+            out_path = plan_dir / "tasks.json"
+            plan_path.write_text(
+                PLAN_TEXT.replace("Depends on: []", "Depends on: [TASK-002]", 1),
+                encoding="utf-8",
+            )
+
+            result = self.run_script(plan_path, out_path)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("cyclic dependsOn", result.stderr)
+            self.assertFalse(out_path.exists())
+
     def test_rejects_plan_without_passed_plan_review_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             plan_dir = Path(tmp) / "work" / "plans" / "active" / "PLAN-123"

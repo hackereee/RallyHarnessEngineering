@@ -33,6 +33,12 @@ class WorkflowStateSchemaTest(unittest.TestCase):
     def test_template_matches_schema(self) -> None:
         self.assert_valid(self.template)
 
+    def test_schema_field_is_required(self) -> None:
+        data = copy.deepcopy(self.template)
+        data.pop("$schema")
+
+        self.assert_invalid(data)
+
     def test_direct_workflow_cannot_have_active_task_without_plan(self) -> None:
         data = copy.deepcopy(self.template)
         data["activePlanRef"] = None

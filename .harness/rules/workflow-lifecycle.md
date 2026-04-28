@@ -70,6 +70,8 @@ planning ──► implementing ──► testing ──► reviewing ──► 
 
 **terminal reset**：`completed` / `archived` 重新进入 `active` 是 workflow 级重置，不是普通 phase 变更。即使 `currentPhase` 未变化，也必须经 `start-workflow.py` 调用 `state-write.py --allow-terminal-reset`，显式写入新的 `workflowId`、`workflowStatus=active`、`activePlanRef`、`activeTaskId`、`currentPhase`、`ownerRole`、`nextAction`。
 
+**terminal close**：`active` 收口到 `completed` / `archived` 不是普通字段更新。L0/L1 必须经 `complete-workflow.py`，L2/L3 必须经 `archive-plan.py`；底层 `state-write.py` 只有在显式传入 `--allow-terminal-close`、patch 显式清空 active 引用并确认 `work/plans/active/` 无残留 active plan 时才允许写入 terminal state。
+
 ### 3.1 workflow ownerRole 与 task ownerRole
 
 `workflow-state.ownerRole` 是 workflow gate 级责任角色，适用于 L0-L3。它由 `currentPhase` 决定：
@@ -117,10 +119,10 @@ planning ──► implementing ──► testing ──► reviewing ──► 
 当前已实现的相关脚本：
 
 - `session-start.py`：会话启动 preflight。检查 Harness 关键工件与环境，运行 `lint-harness.py`，在 `workflow-state.json` 缺失且没有 active plan 时从模板创建首个 L0/L1 state，随后运行 `validate-state.py` 并写入 `work/sessions/YYYY-MM-DD/session-<id>.md` 审计快照。它不得修改已有 state，不得激活 task，不得推进 phase。
-- `materialize-tasks.py`：从已确认的 `plan.md` 任务契约生成初始 `tasks.json`，所有 task 均为 `idle/developer`，`review.lastResult = "not_run"`。
+- `materialize-tasks.py`：从已确认的 `plan.md` 任务契约生成初始 `tasks.json`，所有 task 均为 `idle/developer`，`review.lastResult = "not_run"`，并阻断未知或成环的 `dependsOn`。
 - `update-task.py`：`tasks.json` 的 task 状态写入网关。负责更新 task `status`、`ownerRole`、`currentStep`、`nextAction`、`verification`、`review`、`blockedReason`，并在写入前校验 `tasks.schema.json` 与 task 完成前置条件。
 - `select-next-task.py`：只读选择器。按 `dependsOn` 与 `status` 选出下一个可执行 `idle` task；若 plan 内所有 task 均为 `done`，输出进入 `archiving` 的 state patch 建议。它只输出给 `update-task.py` / `state-write.py` 使用的结构化建议，不直接写 `tasks.json` 或 `workflow-state.json`。
-- `state-write.py`：`workflow-state.json` 唯一写入网关。
+- `state-write.py`：`workflow-state.json` 唯一写入网关；terminal reset 与 terminal close 都必须使用显式 flag，并通过对应前置条件。
 - `start-workflow.py`：从 `completed` / `archived` 终态开启新的 `active` workflow。它不直接写 state，而是经 `state-write.py --allow-terminal-reset` 执行显式 terminal reset；direct L0/L1 进入 `implementing/developer`，planned L2/L3 绑定已存在 active plan package 并进入 `planning/planner`。
 - `lifecycle-transaction.py`：生命周期流转事务协调器。对一次 transition 执行 `lint-harness.py` / `validate-state.py` preflight，在隔离副本里 dry-run，再调用 `update-task.py` 与 `state-write.py` 落盘并追加 `handoff.md`，最后执行 postflight。它不替代底层写入网关；当前支持 `activate-next`、`start-testing`、`start-review`、`review-failed`、`review-passed`。
 - `commit-task.py`：task 完成提交 gate。只在 `lifecycle-transaction.py review-passed` 之后使用；它读取 `workflow-state.json` 与当前 active plan 的 `tasks.json`，确认目标 task 已 `done` 且 verification/review 均 passed，然后执行 `git add -A` 与 `git commit`。它不写 state/tasks，不替代 lifecycle transition。
@@ -298,3 +300,4 @@ Architecture Impact 是 workflow gate，不是 standalone task。它要求 Agent
 | L0/L1 completion 被用于 plan-backed workflow | `complete-workflow.py` | 阻断；要求改走 `archive-plan.py` |
 | 从非终态开启新 workflow | `start-workflow.py` | 阻断；要求先完成或归档当前 workflow |
 | terminal reset 复用旧 workflowId 或未显式清空 active 引用 | `state-write.py --allow-terminal-reset` | 阻断；要求使用新 workflowId 并显式写入完整 state 字段 |
+| terminal close 未经显式 flag 或仍有 active plan 残留 | `state-write.py --allow-terminal-close` | 阻断；要求改走 `complete-workflow.py` 或 `archive-plan.py` 完成收口 |

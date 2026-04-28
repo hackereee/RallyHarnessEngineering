@@ -277,6 +277,8 @@ def validate_manifest(manifest: dict, schema: dict, plan_text: str) -> None:
         if not re.search(rf"""<a\s+id=["']{re.escape(anchor)}["']\s*></a>""", plan_text):
             raise MaterializeError(f"{task['taskId']}: missing anchor in plan.md: {anchor}")
 
+    validate_dependency_graph_is_acyclic(manifest["tasks"])
+
     validator = Draft202012Validator(schema)
     errors = sorted(validator.iter_errors(manifest), key=lambda err: list(err.absolute_path))
     if errors:
@@ -285,6 +287,32 @@ def validate_manifest(manifest: dict, schema: dict, plan_text: str) -> None:
             loc = "/".join(str(part) for part in err.absolute_path) or "<root>"
             lines.append(f"{loc}: {err.message}")
         raise MaterializeError("schema validation failed:\n" + "\n".join(lines))
+
+
+def validate_dependency_graph_is_acyclic(tasks: list[dict]) -> None:
+    graph = {task["taskId"]: list(task["dependsOn"]) for task in tasks}
+    visiting: set[str] = set()
+    visited: set[str] = set()
+    stack: list[str] = []
+
+    def visit(task_id: str) -> None:
+        if task_id in visited:
+            return
+        if task_id in visiting:
+            start = stack.index(task_id)
+            cycle = [*stack[start:], task_id]
+            raise MaterializeError(f"cyclic dependsOn: {' -> '.join(cycle)}")
+
+        visiting.add(task_id)
+        stack.append(task_id)
+        for dependency in graph[task_id]:
+            visit(dependency)
+        stack.pop()
+        visiting.remove(task_id)
+        visited.add(task_id)
+
+    for task_id in graph:
+        visit(task_id)
 
 
 def atomic_write_json(path: Path, data: dict) -> None:

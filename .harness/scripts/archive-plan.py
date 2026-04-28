@@ -194,6 +194,7 @@ def patch_archived_state(root: Path) -> None:
             "archive-plan.py",
             "--reason",
             "archive active plan package",
+            "--allow-terminal-close",
         ],
         root,
     )

@@ -58,6 +58,35 @@ def command_registry(contract: dict) -> dict[str, dict]:
     return registry
 
 
+def validate_contract_semantics(contract: dict) -> None:
+    errors: list[str] = []
+
+    command_ids: set[str] = set()
+    for command in contract.get("commandRegistry", []):
+        command_id = command.get("id")
+        if not isinstance(command_id, str):
+            continue
+        if command_id in command_ids:
+            errors.append(f"duplicate commandRegistry id: {command_id}")
+        command_ids.add(command_id)
+
+    check_ids: set[str] = set()
+    for check in contract.get("environmentChecks", []):
+        check_id = check.get("id")
+        if isinstance(check_id, str):
+            if check_id in check_ids:
+                errors.append(f"duplicate environmentChecks id: {check_id}")
+            check_ids.add(check_id)
+
+        command_ref = check.get("commandRef")
+        if isinstance(command_ref, str) and command_ref not in command_ids:
+            label = check_id if isinstance(check_id, str) else "<missing-id>"
+            errors.append(f"{label}: unknown commandRef: {command_ref}")
+
+    if errors:
+        raise CheckProjectEnvError("contract semantic validation failed:\n" + "\n".join(errors))
+
+
 def run_command_check(root: Path, command: dict) -> tuple[bool, str]:
     command_args = command.get("command", [])
     if not isinstance(command_args, list) or not command_args:
@@ -172,6 +201,7 @@ def run(args: argparse.Namespace) -> int:
         if not isinstance(contract, dict):
             raise CheckProjectEnvError(f"{contract_path} top-level JSON must be an object")
         validate_contract(contract, schema)
+        validate_contract_semantics(contract)
     except CheckProjectEnvError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

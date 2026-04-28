@@ -44,6 +44,33 @@ def archived_state() -> dict:
     return state
 
 
+def direct_reviewing_state() -> dict:
+    state = base_state()
+    state.update(
+        {
+            "currentPhase": "reviewing",
+            "ownerRole": "reviewer",
+            "nextAction": "Review direct workflow evidence",
+        }
+    )
+    return state
+
+
+def archiving_plan_state() -> dict:
+    state = base_state()
+    state.update(
+        {
+            "workflowId": "workflow-plan-001-v1",
+            "activePlanRef": "./plans/active/PLAN-001/plan.md",
+            "activeTaskId": None,
+            "currentPhase": "archiving",
+            "ownerRole": "developer",
+            "nextAction": "Archive current plan package",
+        }
+    )
+    return state
+
+
 def plan_state() -> dict:
     state = base_state()
     state.update(
@@ -111,6 +138,36 @@ class StateWriteTest(unittest.TestCase):
         state_path = Path(tmp) / "work" / "workflow-state.json"
         state_path.parent.mkdir(parents=True)
         state_path.write_text(json.dumps(archived_state(), indent=2) + "\n", encoding="utf-8")
+        return state_path
+
+    def write_direct_reviewing_state(self, tmp: str) -> Path:
+        state_path = Path(tmp) / "work" / "workflow-state.json"
+        state_path.parent.mkdir(parents=True)
+        state_path.write_text(json.dumps(direct_reviewing_state(), indent=2) + "\n", encoding="utf-8")
+        return state_path
+
+    def write_archiving_plan_state_with_active_dir(self, tmp: str) -> Path:
+        root = Path(tmp)
+        plan_dir = root / "work" / "plans" / "active" / "PLAN-001"
+        plan_dir.mkdir(parents=True)
+        (plan_dir / "plan.md").write_text("# PLAN-001\n", encoding="utf-8")
+        (plan_dir / "tasks.json").write_text(
+            json.dumps(
+                {
+                    "$schema": "../../../../.harness/schemas/tasks.schema.json",
+                    "planId": "PLAN-001",
+                    "planRef": "./plan.md",
+                    "tasks": [task_fixture(status="done", review_result="passed")],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        state_path = root / "work" / "workflow-state.json"
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps(archiving_plan_state(), indent=2) + "\n", encoding="utf-8")
         return state_path
 
     def write_plan_state(self, tmp: str, task: dict | None = None) -> Path:
@@ -247,6 +304,40 @@ class StateWriteTest(unittest.TestCase):
             data = json.loads(state_path.read_text(encoding="utf-8"))
             self.assertEqual(data["currentPhase"], "archiving")
             self.assertIsNone(data["activeTaskId"])
+
+    def test_rejects_terminal_close_without_explicit_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = self.write_direct_reviewing_state(tmp)
+            before = state_path.read_text(encoding="utf-8")
+            patch = [
+                {"op": "replace", "path": "/workflowStatus", "value": "completed"},
+                {"op": "replace", "path": "/activePlanRef", "value": None},
+                {"op": "replace", "path": "/activeTaskId", "value": None},
+                {"op": "replace", "path": "/nextAction", "value": "开启下一个 workflow"},
+            ]
+
+            result = self.run_state_write(state_path, patch)
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("terminal close", result.stderr + result.stdout)
+            self.assertEqual(state_path.read_text(encoding="utf-8"), before)
+
+    def test_rejects_archived_close_when_active_plan_dir_remains(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = self.write_archiving_plan_state_with_active_dir(tmp)
+            before = state_path.read_text(encoding="utf-8")
+            patch = [
+                {"op": "replace", "path": "/workflowStatus", "value": "archived"},
+                {"op": "replace", "path": "/activePlanRef", "value": None},
+                {"op": "replace", "path": "/activeTaskId", "value": None},
+                {"op": "replace", "path": "/nextAction", "value": "开启下一个 workflow"},
+            ]
+
+            result = self.run_state_write(state_path, patch, ["--allow-terminal-close"])
+
+            self.assertEqual(result.returncode, 1, result.stderr + result.stdout)
+            self.assertIn("active plan", result.stderr + result.stdout)
+            self.assertEqual(state_path.read_text(encoding="utf-8"), before)
 
     def test_terminal_reset_requires_explicit_flag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

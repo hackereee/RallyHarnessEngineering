@@ -67,6 +67,12 @@ TERMINAL_RESET_REQUIRED_FIELDS = (
     "ownerRole",
     "nextAction",
 )
+TERMINAL_CLOSE_REQUIRED_FIELDS = (
+    "workflowStatus",
+    "activePlanRef",
+    "activeTaskId",
+    "nextAction",
+)
 
 
 # ---------- 基础工具 ----------
@@ -387,6 +393,14 @@ def is_terminal_reopen(before: dict, after: dict) -> bool:
     )
 
 
+def is_terminal_close(before: dict, after: dict) -> bool:
+    return (
+        before.get("workflowStatus") == "active"
+        and after.get("workflowStatus") in TERMINAL_WORKFLOW_STATUSES
+        and before.get("workflowStatus") != after.get("workflowStatus")
+    )
+
+
 def validate_terminal_reset(before: dict, after: dict, patch: list[dict]) -> list[str]:
     errors: list[str] = []
 
@@ -422,6 +436,46 @@ def validate_terminal_reset(before: dict, after: dict, patch: list[dict]) -> lis
     return errors
 
 
+def active_plan_dirs_for_state(state_path: Path) -> list[Path]:
+    active_root = state_path.resolve().parent / "plans" / "active"
+    if not active_root.exists() or not active_root.is_dir():
+        return []
+    return sorted(path for path in active_root.iterdir() if path.is_dir())
+
+
+def validate_terminal_close(before: dict, after: dict, patch: list[dict], state_path: Path) -> list[str]:
+    errors: list[str] = []
+    target_status = after.get("workflowStatus")
+
+    for field in TERMINAL_CLOSE_REQUIRED_FIELDS:
+        if not patch_touches_field(patch, field):
+            errors.append(f"terminal close 必须显式写入 {field}")
+
+    if after.get("activePlanRef") is not None or after.get("activeTaskId") is not None:
+        errors.append("terminal close 要求 activePlanRef=null 且 activeTaskId=null")
+
+    active_dirs = active_plan_dirs_for_state(state_path)
+    if active_dirs:
+        names = ", ".join(path.name for path in active_dirs)
+        errors.append(
+            "terminal close 要求 work/plans/active/ 不存在 active plan；"
+            f"当前仍有 active plan: {names}"
+        )
+
+    if target_status == "completed":
+        if after.get("currentPhase") != "reviewing" or after.get("ownerRole") != "reviewer":
+            errors.append("completed terminal close 要求 currentPhase=reviewing 且 ownerRole=reviewer")
+        if before.get("activePlanRef") is not None or before.get("activeTaskId") is not None:
+            errors.append("completed terminal close 只适用于 L0/L1 direct workflow")
+    elif target_status == "archived":
+        if after.get("currentPhase") != "archiving" or after.get("ownerRole") != "developer":
+            errors.append("archived terminal close 要求 currentPhase=archiving 且 ownerRole=developer")
+    else:
+        errors.append(f"terminal close 目标 workflowStatus 不支持: {target_status!r}")
+
+    return errors
+
+
 def run(args: argparse.Namespace) -> int:
     state_path: Path = args.state
     schema_path: Path = args.schema
@@ -447,8 +501,10 @@ def run(args: argparse.Namespace) -> int:
         return 1
 
     terminal_reset = False
+    terminal_close = False
     transition_errors: list[str] = []
     terminal_reopen = is_terminal_reopen(before, after)
+    terminal_closing = is_terminal_close(before, after)
     if terminal_reopen and not args.allow_terminal_reset:
         transition_errors = [
             "terminal reset 必须显式传入 --allow-terminal-reset；"
@@ -460,8 +516,19 @@ def run(args: argparse.Namespace) -> int:
             transition_errors = reset_errors
         else:
             terminal_reset = True
+    elif terminal_closing and not args.allow_terminal_close:
+        transition_errors = [
+            "terminal close 必须显式传入 --allow-terminal-close；"
+            "禁止通过局部 workflowStatus patch 绕过 complete-workflow.py 或 archive-plan.py"
+        ]
+    elif terminal_closing and args.allow_terminal_close:
+        close_errors = validate_terminal_close(before, after, patch, state_path)
+        if close_errors:
+            transition_errors = close_errors
+        else:
+            terminal_close = True
 
-    if not transition_errors and not terminal_reset:
+    if not transition_errors and not terminal_reset and not terminal_close:
         transition_errors = validate_phase_transition(before, after)
 
     if transition_errors:
@@ -568,6 +635,11 @@ def main(argv: Iterable[str] | None = None) -> int:
         "--allow-terminal-reset",
         action="store_true",
         help="允许 completed/archived 终态 workflow 显式切换为新的 active workflow",
+    )
+    parser.add_argument(
+        "--allow-terminal-close",
+        action="store_true",
+        help="允许 active workflow 显式收口到 completed/archived 终态",
     )
     args = parser.parse_args(list(argv) if argv is not None else None)
 

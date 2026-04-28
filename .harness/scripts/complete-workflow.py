@@ -170,6 +170,7 @@ def write_state_completed(root: Path) -> None:
             "complete-workflow.py",
             "--reason",
             "complete L0/L1 workflow",
+            "--allow-terminal-close",
         ],
         root,
     )
