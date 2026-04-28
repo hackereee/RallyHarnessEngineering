@@ -104,6 +104,19 @@ class ProjectInitSkillTest(unittest.TestCase):
         self.assertIn("root `ARCHITECTURE.md`", text)
         self.assertIn("业务架构", text)
 
+    def test_architecture_documents_entrypoint_integration_boundary(self) -> None:
+        text = HARNESS_ARCHITECTURE.read_text(encoding="utf-8")
+
+        self.assertIn("target agent entrypoint integration", text)
+        self.assertIn("workflow mapping layer", text)
+        self.assertIn("root `ARCHITECTURE.md` remains target project business architecture", text)
+        self.assertIn("`.harness/ARCHITECTURE.md` remains Harness framework architecture", text)
+        self.assertIn(
+            "`project-entrypoints.json` is deterministic entrypoint metadata, not a semantic conflict report",
+            text,
+        )
+        self.assertNotIn("harness-design/architecture.md", text)
+
     def test_harness_architecture_doc_exists(self) -> None:
         text = HARNESS_ARCHITECTURE.read_text(encoding="utf-8")
 

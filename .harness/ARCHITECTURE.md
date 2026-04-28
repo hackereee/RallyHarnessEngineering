@@ -139,7 +139,19 @@ repo/
 ### `.harness/contracts/`
 项目级契约目录。目录本身随 Harness 版本化，`project-contracts.json may be absent until project-env-contract configures it`；缺失时 `.harness/scripts/check-project-env.py` 返回 `NOT_CONFIGURED`，表示项目环境契约尚未初始化，而不是 Harness 核心损坏。`project-env-contract` 的默认输出是 `.harness/contracts/project-contracts.json`，它是 project environment checks 的 truth source。`.harness/scripts/check-project-env.py` 只能读取该契约并执行其中声明的 command 或 probe；它不得从仓库自由推断项目事实，也不得替代 `session-start.py`。
 
-`project-entrypoints.json` 由 `project-init` skill 通过 `.harness/scripts/init-project-entrypoint.py` 生成或更新，用来记录真实项目 canonical agent entrypoint、已发现入口、managed block 状态、root `ARCHITECTURE.md` 业务架构引用和 `.harness/ARCHITECTURE.md` 框架架构引用。缺失表示入口契约尚未配置，不代表 Harness 核心损坏；但 schema、template 与脚本本身属于 Harness core assets。
+`project-entrypoints.json` 由 `project-init` skill 通过 `.harness/scripts/init-project-entrypoint.py` 生成或更新，用来记录真实项目 canonical agent entrypoint、已发现入口、managed block 状态、managed block 版本、root `ARCHITECTURE.md` 业务架构引用和 `.harness/ARCHITECTURE.md` 框架架构引用。`project-entrypoints.json` is deterministic entrypoint metadata, not a semantic conflict report；目标入口中的 workflow、task、testing、review、commit、handoff、backlog 或 archive 语义冲突由 Agent 在 `project-init` 过程中判断并报告，不写入该契约。缺失表示入口契约尚未配置，不代表 Harness 核心损坏；但 schema、template 与脚本本身属于 Harness core assets。
+
+### Target Agent Entrypoint Integration
+
+`project-init` 负责 target agent entrypoint integration。它是一个 workflow mapping layer：读取目标项目已存在的 `AGENTS.md`、`CLAUDE.md`、`GEMINI.md`、Copilot instructions 或编辑器规则后，把目标项目的启动、规划、开发、测试、评审、提交、交接、backlog 与归档语义映射到 Harness lifecycle，而不是在目标仓库里创造第二套状态机。
+
+边界如下：
+
+- root `ARCHITECTURE.md` remains target project business architecture；它只描述目标项目业务模块、依赖、数据流、运行拓扑和项目边界。
+- `.harness/ARCHITECTURE.md` remains Harness framework architecture；它只描述 Harness 分层、生命周期、schema、template、rules、skills、scripts 与 `work/` 运行态边界。
+- `.harness/contracts/project-entrypoints.json` 只保存 canonical entrypoint、detected entries、managed block 状态和版本等确定性事实。
+- 语义冲突 review 只属于 Agent 输出、session audit、handoff 或后续计划，不属于 schema/script 可判定的 entrypoint contract。
+- `.harness/scripts/init-project-entrypoint.py` 只能创建或替换 `harness-engineering` managed block、确保 root `ARCHITECTURE.md` 存在并写入 entrypoint contract；它不得解析自由文本来判断工作流冲突。
 
 ### `.harness/rules/`
 只写 schema 无法表达的语义约定，例如"`nextAction` 必须是单句原子动作"、"阶段流转需要哪些工件与脚本网关"。避免与 schema 重复。
