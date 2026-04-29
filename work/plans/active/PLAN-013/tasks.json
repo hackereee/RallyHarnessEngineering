@@ -10,7 +10,7 @@
       "status": "done",
       "currentStep": "Review passed",
       "nextAction": "",
-      "ownerRole": "reviewer",
+      "ownerRole": "developer",
       "dependsOn": [],
       "files": {
         "create": [],
@@ -83,14 +83,74 @@
     },
     {
       "taskId": "TASK-002",
-      "title": "Normalize framework contract prose",
-      "planSection": "task-002-normalize-framework-contract-prose",
-      "status": "implementing",
-      "currentStep": "Activated by lifecycle transaction",
-      "nextAction": "执行 TASK-002",
-      "ownerRole": "developer",
+      "title": "Bump package release version",
+      "planSection": "task-002-bump-package-release-version",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
       "dependsOn": [
         "TASK-001"
+      ],
+      "files": {
+        "create": [],
+        "modify": [
+          "pyproject.toml",
+          "src/harness_engineering_installer/__init__.py"
+        ],
+        "test": [
+          "installer/tests/",
+          "installer/release/check_artifacts.py",
+          "installer/release/smoke_install.py"
+        ]
+      },
+      "acceptance": [
+        "`pyproject.toml` and `src/harness_engineering_installer/__init__.py` declare the same next patch version.",
+        "Local installer tests pass against the bumped version.",
+        "Built distribution artifacts pass `installer/release/check_artifacts.py`.",
+        "Installed wheel smoke testing passes through `installer/release/smoke_install.py`.",
+        "No generated `dist/` artifacts are committed."
+      ],
+      "verification": {
+        "commands": [
+          "python3 -m unittest discover -s installer/tests -p 'test_*.py'",
+          "python3 -m build",
+          "python3 installer/release/check_artifacts.py dist",
+          "python3 installer/release/smoke_install.py dist"
+        ],
+        "checks": [
+          "`git status --short dist` shows no tracked release artifacts staged."
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 92,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "package version is synchronized",
+          "installer release tests passed",
+          "build and artifact inspection passed",
+          "installed wheel smoke test passed",
+          "release artifacts are not committed"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-29/session-PLAN-013-TASK-002-review.md"
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-003",
+      "title": "Normalize framework contract prose",
+      "planSection": "task-003-normalize-framework-contract-prose",
+      "status": "implementing",
+      "currentStep": "Activated by lifecycle transaction",
+      "nextAction": "执行 TASK-003",
+      "ownerRole": "developer",
+      "dependsOn": [
+        "TASK-001",
+        "TASK-002"
       ],
       "files": {
         "create": [],
@@ -135,16 +195,17 @@
       "blockedReason": ""
     },
     {
-      "taskId": "TASK-003",
+      "taskId": "TASK-004",
       "title": "Normalize script diagnostics",
-      "planSection": "task-003-normalize-script-diagnostics",
+      "planSection": "task-004-normalize-script-diagnostics",
       "status": "idle",
       "currentStep": "",
       "nextAction": "",
       "ownerRole": "developer",
       "dependsOn": [
         "TASK-001",
-        "TASK-002"
+        "TASK-002",
+        "TASK-003"
       ],
       "files": {
         "create": [],
@@ -189,9 +250,9 @@
       "blockedReason": ""
     },
     {
-      "taskId": "TASK-004",
+      "taskId": "TASK-005",
       "title": "Add language regression guard",
-      "planSection": "task-004-add-language-regression-guard",
+      "planSection": "task-005-add-language-regression-guard",
       "status": "idle",
       "currentStep": "",
       "nextAction": "",
@@ -199,7 +260,8 @@
       "dependsOn": [
         "TASK-001",
         "TASK-002",
-        "TASK-003"
+        "TASK-003",
+        "TASK-004"
       ],
       "files": {
         "create": [

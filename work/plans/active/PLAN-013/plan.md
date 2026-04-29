@@ -126,9 +126,38 @@ Verification:
 - Run: `python3 installer/tests/test_installer_engine.py`
 - Check: `cmp -s .harness/templates/entrypoint-managed-block.template.md src/harness_engineering_installer/payload/.harness/templates/entrypoint-managed-block.template.md`.
 
-<a id="task-002-normalize-framework-contract-prose"></a>
+<a id="task-002-bump-package-release-version"></a>
 
-### TASK-002: Normalize framework contract prose
+### TASK-002: Bump package release version
+
+Goal: Bump the installer package version for the managed block v2 fixed assets and pass the local package release gates.
+
+Files:
+- Modify: `pyproject.toml`
+- Modify: `src/harness_engineering_installer/__init__.py`
+- Test: `installer/tests/`
+- Test: `installer/release/check_artifacts.py`
+- Test: `installer/release/smoke_install.py`
+
+Depends on: [TASK-001]
+
+Acceptance:
+- `pyproject.toml` and `src/harness_engineering_installer/__init__.py` declare the same next patch version.
+- Local installer tests pass against the bumped version.
+- Built distribution artifacts pass `installer/release/check_artifacts.py`.
+- Installed wheel smoke testing passes through `installer/release/smoke_install.py`.
+- No generated `dist/` artifacts are committed.
+
+Verification:
+- Run: `python3 -m unittest discover -s installer/tests -p 'test_*.py'`
+- Run: `python3 -m build`
+- Run: `python3 installer/release/check_artifacts.py dist`
+- Run: `python3 installer/release/smoke_install.py dist`
+- Check: `git status --short dist` shows no tracked release artifacts staged.
+
+<a id="task-003-normalize-framework-contract-prose"></a>
+
+### TASK-003: Normalize framework contract prose
 
 Goal: Translate and standardize static Harness framework documentation, rules, skills, templates, and schema prose to English.
 
@@ -142,7 +171,7 @@ Files:
 - Test: `.harness/tests/test_tasks_schema.py`
 - Test: `.harness/tests/test_workflow_state_schema.py`
 
-Depends on: [TASK-001]
+Depends on: [TASK-001, TASK-002]
 
 Acceptance:
 - Static `.harness` framework prose is English across architecture, rules, skills, templates, and schemas.
@@ -155,9 +184,9 @@ Verification:
 - Run: `python3 .harness/tests/test_workflow_state_schema.py`
 - Check: `rg -n "\p{Han}" .harness/ARCHITECTURE.md .harness/rules .harness/skills .harness/templates .harness/schemas` reports no remaining human-facing Chinese prose.
 
-<a id="task-003-normalize-script-diagnostics"></a>
+<a id="task-004-normalize-script-diagnostics"></a>
 
-### TASK-003: Normalize script diagnostics
+### TASK-004: Normalize script diagnostics
 
 Goal: Translate and standardize `.harness/scripts` comments, docstrings, CLI help, errors, warnings, and emitted user-facing messages to English.
 
@@ -169,7 +198,7 @@ Files:
 - Test: `.harness/tests/test_state_write.py`
 - Test: `.harness/tests/test_harness_cli.py`
 
-Depends on: [TASK-001, TASK-002]
+Depends on: [TASK-001, TASK-002, TASK-003]
 
 Acceptance:
 - Script comments and docstrings are English.
@@ -184,9 +213,9 @@ Verification:
 - Run: `python3 .harness/tests/test_harness_cli.py`
 - Check: `rg -n "\p{Han}" .harness/scripts` reports no remaining human-facing Chinese script text.
 
-<a id="task-004-add-language-regression-guard"></a>
+<a id="task-005-add-language-regression-guard"></a>
 
-### TASK-004: Add language regression guard
+### TASK-005: Add language regression guard
 
 Goal: Add a regression test and final validation pass that keeps `.harness` human-facing assets standardized in English.
 
@@ -198,7 +227,7 @@ Files:
 - Test: `.harness/tests/test_lifecycle_transaction.py`
 - Test: `.harness/tests/test_backlog_consume.py`
 
-Depends on: [TASK-001, TASK-002, TASK-003]
+Depends on: [TASK-001, TASK-002, TASK-003, TASK-004]
 
 Acceptance:
 - A dedicated language-standardization test fails on accidental Chinese human-facing text under `.harness`.
