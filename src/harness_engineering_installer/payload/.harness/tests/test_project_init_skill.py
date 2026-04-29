@@ -79,12 +79,14 @@ class ProjectInitSkillTest(unittest.TestCase):
         text = self.read_skill()
 
         self.assertIn("planning maps to `planning`", text)
+        self.assertIn("new workflow start maps to `start-workflow.py`", text)
         self.assertIn("development maps to `implementing`", text)
         self.assertIn("tests map to the `testing` gate", text)
         self.assertIn("reviews map to the `reviewing` gate", text)
         self.assertIn("commit-task.py", text)
         self.assertIn("archive-plan.py", text)
         self.assertIn("backlog-intake.py", text)
+        self.assertIn("backlog-consume.py", text)
 
     def test_conflicts_are_reported_before_user_prose_changes(self) -> None:
         text = self.read_skill()
@@ -94,6 +96,7 @@ class ProjectInitSkillTest(unittest.TestCase):
         self.assertIn("Do not parse freeform entrypoint prose in deterministic scripts", text)
         self.assertIn("state-write.py", text)
         self.assertIn("update-task.py", text)
+        self.assertIn("Entry point managed block updates must not re-run or overwrite", text)
 
     def test_requires_harness_assets_to_be_installed_before_project_init(self) -> None:
         text = self.read_skill()

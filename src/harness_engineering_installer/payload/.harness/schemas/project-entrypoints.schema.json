@@ -22,7 +22,7 @@
     },
     "managedBlockVersion": {
       "type": "string",
-      "const": "harness-entrypoint-block-v1"
+      "const": "harness-entrypoint-block-v2"
     },
     "canonicalEntry": {
       "type": "string",
@@ -53,7 +53,7 @@
     },
     "harnessBlockVersion": {
       "type": ["string", "null"],
-      "enum": ["harness-entrypoint-block-v1", "legacy", null]
+      "enum": ["harness-entrypoint-block-v2", "legacy", null]
     },
     "entrypoint": {
       "type": "object",

@@ -227,6 +227,31 @@ class ArchivePlanTest(unittest.TestCase):
             self.assertEqual(state["workflowStatus"], "archived")
             self.assertIsNone(state["activePlanRef"])
 
+    def test_archives_when_harness_root_is_nested_below_git_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            git_root = Path(tmp)
+            root = git_root / "now"
+            self.write_harness_assets(root)
+            active_dir = self.write_active_plan(root)
+            state_path = self.write_state(root)
+            self.init_git_checkpoint(git_root)
+            closure_path = root / "work" / "plans" / "active" / "PLAN-001" / "closure.md"
+            closure_path.write_text(
+                closure_path.read_text(encoding="utf-8") + "\n- Nested root archive note.\n",
+                encoding="utf-8",
+            )
+
+            result = self.run_archive(root)
+
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertFalse(active_dir.exists())
+            archived_dir = root / "work" / "plans" / "archived" / "PLAN-001"
+            self.assertTrue(archived_dir.exists())
+
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(state["workflowStatus"], "archived")
+            self.assertIsNone(state["activePlanRef"])
+
     def test_rejects_missing_closure_without_moving_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

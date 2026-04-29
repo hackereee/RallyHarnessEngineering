@@ -3,7 +3,7 @@
 
 This repository uses Harness Engineering for agent workflow control.
 
-Managed block version: `harness-entrypoint-block-v1`
+Managed block version: `harness-entrypoint-block-v2`
 
 Read order:
 1. This agent entry document.
@@ -21,6 +21,7 @@ Conflict priority:
 
 Workflow mapping:
 - startup and resume rules map to `session-start.py`.
+- new workflow start maps to `start-workflow.py`.
 - planning maps to `planning`.
 - development maps to `implementing`.
 - tests map to the `testing` gate.
@@ -28,7 +29,8 @@ Workflow mapping:
 - task completion commits map to `commit-task.py`.
 - L0/L1 completion maps to `complete-workflow.py`.
 - L2/L3 archive maps to `archive-plan.py`.
-- incoming work maps to `backlog-intake.py`.
+- incoming backlog intake maps to `backlog-intake.py`.
+- backlog consumption maps to `backlog-consume.py`.
 
 Truth sources:
 - Workflow runtime: `work/workflow-state.json`
@@ -42,7 +44,9 @@ Write gateways:
 - `workflow-state.json` is written only through `state-write.py` or lifecycle tools that call it.
 - `tasks.json` is initialized through `materialize-tasks.py` and updated through `update-task.py`.
 - Phase transitions use `lifecycle-transaction.py` when available.
-- Backlog writes use `backlog-intake.py`.
+- Backlog intake writes use `backlog-intake.py`.
+- Backlog consumption writes use `backlog-consume.py`.
+- Entry point managed block updates must not re-run or overwrite `.harness/contracts/project-contracts.json`.
 
 Task modeling:
 - A task is a deliverable work unit.

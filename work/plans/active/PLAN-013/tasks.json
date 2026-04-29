@@ -5,13 +5,93 @@
   "tasks": [
     {
       "taskId": "TASK-001",
+      "title": "Bump entrypoint managed block version",
+      "planSection": "task-001-bump-entrypoint-managed-block-version",
+      "status": "done",
+      "currentStep": "Review passed",
+      "nextAction": "",
+      "ownerRole": "reviewer",
+      "dependsOn": [],
+      "files": {
+        "create": [],
+        "modify": [
+          ".harness/templates/entrypoint-managed-block.template.md",
+          ".harness/scripts/init-project-entrypoint.py",
+          ".harness/schemas/project-entrypoints.schema.json",
+          ".harness/templates/project-entrypoints.template.json",
+          ".harness/skills/project-init/SKILL.md",
+          ".harness/tests/test_init_project_entrypoint.py",
+          ".harness/tests/test_project_entrypoints_schema.py",
+          ".harness/tests/test_project_init_skill.py",
+          "src/harness_engineering_installer/payload/.harness/templates/entrypoint-managed-block.template.md",
+          "src/harness_engineering_installer/payload/.harness/scripts/init-project-entrypoint.py",
+          "src/harness_engineering_installer/payload/.harness/schemas/project-entrypoints.schema.json",
+          "src/harness_engineering_installer/payload/.harness/templates/project-entrypoints.template.json",
+          "src/harness_engineering_installer/payload/.harness/skills/project-init/SKILL.md",
+          "src/harness_engineering_installer/payload/.harness/ARCHITECTURE.md",
+          "src/harness_engineering_installer/payload/.harness/rules/archive-rules.md",
+          "src/harness_engineering_installer/payload/.harness/scripts/archive-plan.py",
+          "src/harness_engineering_installer/payload/.harness/tests/test_init_project_entrypoint.py",
+          "src/harness_engineering_installer/payload/.harness/tests/test_project_entrypoints_schema.py",
+          "src/harness_engineering_installer/payload/.harness/tests/test_project_init_skill.py",
+          "src/harness_engineering_installer/payload/.harness/tests/test_archive_plan.py"
+        ],
+        "test": [
+          ".harness/tests/test_init_project_entrypoint.py",
+          ".harness/tests/test_project_entrypoints_schema.py",
+          ".harness/tests/test_project_init_skill.py",
+          "installer/tests/test_asset_manifest.py",
+          "installer/tests/test_installer_engine.py"
+        ]
+      },
+      "acceptance": [
+        "Managed block version changes from `harness-entrypoint-block-v1` to `harness-entrypoint-block-v2` across the template, script constant, schema, template contract, tests, and installer payload.",
+        "Running `init-project-entrypoint.py --write` replaces an existing v1 managed block with the full v2 block while preserving user prose outside the markers.",
+        "The v2 block maps terminal new workflow start to `start-workflow.py`, backlog intake to `backlog-intake.py`, and backlog consumption to `backlog-consume.py`.",
+        "Entry point updates do not re-run or overwrite `.harness/contracts/project-contracts.json`.",
+        "Installer payload fixed assets match the source `.harness` assets."
+      ],
+      "verification": {
+        "commands": [
+          "python3 .harness/tests/test_init_project_entrypoint.py",
+          "python3 .harness/tests/test_project_entrypoints_schema.py",
+          "python3 .harness/tests/test_project_init_skill.py",
+          "python3 installer/tests/test_asset_manifest.py",
+          "python3 installer/tests/test_installer_engine.py"
+        ],
+        "checks": [
+          "`cmp -s .harness/templates/entrypoint-managed-block.template.md src/harness_engineering_installer/payload/.harness/templates/entrypoint-managed-block.template.md`."
+        ],
+        "lastResult": "passed"
+      },
+      "review": {
+        "score": 94,
+        "threshold": 85,
+        "lastResult": "passed",
+        "rubricVersion": "review-rubric-v1",
+        "checks": [
+          "task acceptance is satisfied",
+          "verification evidence is present and relevant",
+          "schema, template, script, tests, and installer payload are synchronized",
+          "entrypoint update preserves project-contracts.json",
+          "lifecycle invariants hold"
+        ],
+        "findings": [],
+        "reportRef": "work/sessions/2026-04-29/session-PLAN-013-TASK-001-review.md"
+      },
+      "blockedReason": ""
+    },
+    {
+      "taskId": "TASK-002",
       "title": "Normalize framework contract prose",
-      "planSection": "task-001-normalize-framework-contract-prose",
+      "planSection": "task-002-normalize-framework-contract-prose",
       "status": "implementing",
       "currentStep": "Activated by lifecycle transaction",
-      "nextAction": "执行 TASK-001",
+      "nextAction": "执行 TASK-002",
       "ownerRole": "developer",
-      "dependsOn": [],
+      "dependsOn": [
+        "TASK-001"
+      ],
       "files": {
         "create": [],
         "modify": [
@@ -55,15 +135,16 @@
       "blockedReason": ""
     },
     {
-      "taskId": "TASK-002",
+      "taskId": "TASK-003",
       "title": "Normalize script diagnostics",
-      "planSection": "task-002-normalize-script-diagnostics",
+      "planSection": "task-003-normalize-script-diagnostics",
       "status": "idle",
       "currentStep": "",
       "nextAction": "",
       "ownerRole": "developer",
       "dependsOn": [
-        "TASK-001"
+        "TASK-001",
+        "TASK-002"
       ],
       "files": {
         "create": [],
@@ -108,16 +189,17 @@
       "blockedReason": ""
     },
     {
-      "taskId": "TASK-003",
+      "taskId": "TASK-004",
       "title": "Add language regression guard",
-      "planSection": "task-003-add-language-regression-guard",
+      "planSection": "task-004-add-language-regression-guard",
       "status": "idle",
       "currentStep": "",
       "nextAction": "",
       "ownerRole": "developer",
       "dependsOn": [
         "TASK-001",
-        "TASK-002"
+        "TASK-002",
+        "TASK-003"
       ],
       "files": {
         "create": [

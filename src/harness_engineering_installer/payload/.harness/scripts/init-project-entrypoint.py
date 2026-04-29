@@ -27,7 +27,7 @@ except ImportError:
 
 START_MARKER = "<!-- harness-engineering:start -->"
 END_MARKER = "<!-- harness-engineering:end -->"
-MANAGED_BLOCK_VERSION = "harness-entrypoint-block-v1"
+MANAGED_BLOCK_VERSION = "harness-entrypoint-block-v2"
 PROJECT_ARCHITECTURE_REF = "ARCHITECTURE.md"
 HARNESS_ARCHITECTURE_REF = ".harness/ARCHITECTURE.md"
 

@@ -47,7 +47,7 @@ class InitProjectEntrypointTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             data = json.loads(result.stdout)
             self.assertEqual(data["canonicalEntry"], "AGENTS.md")
-            self.assertEqual(data["managedBlockVersion"], "harness-entrypoint-block-v1")
+            self.assertEqual(data["managedBlockVersion"], "harness-entrypoint-block-v2")
             self.assertEqual(data["projectArchitectureRef"], "ARCHITECTURE.md")
             self.assertEqual(data["harnessArchitectureRef"], ".harness/ARCHITECTURE.md")
             self.assertEqual(
@@ -62,7 +62,8 @@ class InitProjectEntrypointTest(unittest.TestCase):
             (root / "AGENTS.md").write_text(
                 "# Agents\n\n"
                 "<!-- harness-engineering:start -->\n"
-                "old block without version\n"
+                "Managed block version: `harness-entrypoint-block-v1`\n"
+                "old v1 block\n"
                 "<!-- harness-engineering:end -->\n",
                 encoding="utf-8",
             )
@@ -88,11 +89,15 @@ class InitProjectEntrypointTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             entry = root / "AGENTS.md"
+            project_contract = root / ".harness" / "contracts" / "project-contracts.json"
+            project_contract.parent.mkdir(parents=True)
+            project_contract.write_text('{"project": "keep"}\n', encoding="utf-8")
             entry.write_text(
                 "# Agents\n\n"
                 "Keep this rule.\n\n"
                 "<!-- harness-engineering:start -->\n"
-                "old block\n"
+                "Managed block version: `harness-entrypoint-block-v1`\n"
+                "old v1 block\n"
                 "<!-- harness-engineering:end -->\n\n"
                 "Keep this footer.\n",
                 encoding="utf-8",
@@ -104,27 +109,30 @@ class InitProjectEntrypointTest(unittest.TestCase):
             text = entry.read_text(encoding="utf-8")
             self.assertIn("Keep this rule.", text)
             self.assertIn("Keep this footer.", text)
-            self.assertNotIn("old block", text)
+            self.assertNotIn("old v1 block", text)
             self.assertEqual(text.count("<!-- harness-engineering:start -->"), 1)
             self.assertEqual(text.count("<!-- harness-engineering:end -->"), 1)
-            self.assertIn("Managed block version: `harness-entrypoint-block-v1`", text)
+            self.assertIn("Managed block version: `harness-entrypoint-block-v2`", text)
             self.assertIn("Conflict priority:", text)
+            self.assertIn("start-workflow.py", text)
             self.assertIn("tests map to the `testing` gate", text)
             self.assertIn("reviews map to the `reviewing` gate", text)
+            self.assertIn("backlog-consume.py", text)
             self.assertIn("Write gateways:", text)
             self.assertIn("Task modeling:", text)
             self.assertIn(".harness/ARCHITECTURE.md", text)
             self.assertIn("ARCHITECTURE.md", text)
             self.assertIn("work/workflow-state.json", text)
+            self.assertEqual(project_contract.read_text(encoding="utf-8"), '{"project": "keep"}\n')
 
             contract = json.loads(
                 (root / ".harness" / "contracts" / "project-entrypoints.json").read_text(encoding="utf-8")
             )
             self.assertEqual(contract["canonicalEntry"], "AGENTS.md")
-            self.assertEqual(contract["managedBlockVersion"], "harness-entrypoint-block-v1")
+            self.assertEqual(contract["managedBlockVersion"], "harness-entrypoint-block-v2")
             self.assertEqual(contract["projectArchitectureRef"], "ARCHITECTURE.md")
             self.assertEqual(contract["detectedEntries"][0]["harnessBlock"], "present")
-            self.assertEqual(contract["detectedEntries"][0]["harnessBlockVersion"], "harness-entrypoint-block-v1")
+            self.assertEqual(contract["detectedEntries"][0]["harnessBlockVersion"], "harness-entrypoint-block-v2")
             self.assertTrue((root / "ARCHITECTURE.md").exists())
             self.assertEqual((root / "ARCHITECTURE.md").read_text(encoding="utf-8"), "")
 
@@ -214,9 +222,11 @@ class InitProjectEntrypointTest(unittest.TestCase):
 
         self.assertEqual(text.count("<!-- harness-engineering:start -->"), 1)
         self.assertEqual(text.count("<!-- harness-engineering:end -->"), 1)
-        self.assertIn("Managed block version: `harness-entrypoint-block-v1`", text)
+        self.assertIn("Managed block version: `harness-entrypoint-block-v2`", text)
         self.assertIn("Workflow mapping:", text)
         self.assertIn("Truth sources:", text)
+        self.assertIn("start-workflow.py", text)
+        self.assertIn("backlog-consume.py", text)
         self.assertTrue(text.strip().startswith("<!-- harness-engineering:start -->"))
         self.assertTrue(text.strip().endswith("<!-- harness-engineering:end -->"))
 
@@ -229,7 +239,7 @@ class InitProjectEntrypointTest(unittest.TestCase):
             template.write_text(
                 "<!-- harness-engineering:start -->\n"
                 "## Harness Engineering\n\n"
-                "Managed block version: `harness-entrypoint-block-v1`\n\n"
+                "Managed block version: `harness-entrypoint-block-v2`\n\n"
                 "Custom template sentinel.\n"
                 "<!-- harness-engineering:end -->\n",
                 encoding="utf-8",
@@ -252,7 +262,7 @@ class InitProjectEntrypointTest(unittest.TestCase):
             template = root / "entrypoint-managed-block.template.md"
             template.write_text(
                 "## Harness Engineering\n\n"
-                "Managed block version: `harness-entrypoint-block-v1`\n",
+                "Managed block version: `harness-entrypoint-block-v2`\n",
                 encoding="utf-8",
             )
 

@@ -37,7 +37,7 @@ class ProjectEntrypointsSchemaTest(unittest.TestCase):
         template = self.load_template()
 
         self.assertEqual(template["contractVersion"], "project-entrypoints-v1")
-        self.assertEqual(template["managedBlockVersion"], "harness-entrypoint-block-v1")
+        self.assertEqual(template["managedBlockVersion"], "harness-entrypoint-block-v2")
         self.assertEqual(template["canonicalEntry"], "AGENTS.md")
         self.assertEqual(template["projectArchitectureRef"], "ARCHITECTURE.md")
         self.assertEqual(template["harnessArchitectureRef"], ".harness/ARCHITECTURE.md")
@@ -49,7 +49,7 @@ class ProjectEntrypointsSchemaTest(unittest.TestCase):
 
         self.assertIn(entry["kind"], ("generic-agent", "tool-agent", "editor-rule"))
         self.assertIn(entry["harnessBlock"], ("present", "absent", "not-applicable"))
-        self.assertIn(entry["harnessBlockVersion"], ("harness-entrypoint-block-v1", "legacy", None))
+        self.assertIn(entry["harnessBlockVersion"], ("harness-entrypoint-block-v2", "legacy", None))
         self.assertIn("path", entry)
         self.assertIn("evidenceSource", entry)
 

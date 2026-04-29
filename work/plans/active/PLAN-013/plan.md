@@ -31,13 +31,16 @@ Treat this as an L3 decomposed Harness framework cleanup because it touches the 
 - Modify: `.harness/skills/`
 - Modify: `.harness/templates/`
 - Modify: `.harness/schemas/`
+- Modify: `.harness/scripts/init-project-entrypoint.py`
 - Modify: `.harness/scripts/`
 - Modify: `.harness/tests/`
+- Modify: `src/harness_engineering_installer/payload/.harness/`
+- Test: `installer/tests/`
 - Create: `.harness/tests/test_language_standardization.py`
 
 ## Task Decomposition
 
-The work is split by artifact ownership. Static contracts and prose come first because scripts and tests refer to the same terms. Script diagnostics and behavior expectations come second. A final regression guard and full verification pass closes the plan.
+The work is split by artifact ownership. Entrypoint managed block versioning and gateway mapping comes first because it changes fixed asset contracts and the installer payload. Static contracts and prose follow because scripts and tests refer to the same terms. Script diagnostics and behavior expectations come after that. A final regression guard and full verification pass closes the plan.
 
 ## Verification Strategy
 
@@ -73,9 +76,59 @@ Findings:
 
 ## Task Contracts
 
-<a id="task-001-normalize-framework-contract-prose"></a>
+<a id="task-001-bump-entrypoint-managed-block-version"></a>
 
-### TASK-001: Normalize framework contract prose
+### TASK-001: Bump entrypoint managed block version
+
+Goal: Bump the Harness entrypoint managed block to v2 and make the block map new workflow start and backlog consumption to their deterministic gateways.
+
+Files:
+- Modify: `.harness/templates/entrypoint-managed-block.template.md`
+- Modify: `.harness/scripts/init-project-entrypoint.py`
+- Modify: `.harness/schemas/project-entrypoints.schema.json`
+- Modify: `.harness/templates/project-entrypoints.template.json`
+- Modify: `.harness/skills/project-init/SKILL.md`
+- Modify: `.harness/tests/test_init_project_entrypoint.py`
+- Modify: `.harness/tests/test_project_entrypoints_schema.py`
+- Modify: `.harness/tests/test_project_init_skill.py`
+- Modify: `src/harness_engineering_installer/payload/.harness/templates/entrypoint-managed-block.template.md`
+- Modify: `src/harness_engineering_installer/payload/.harness/scripts/init-project-entrypoint.py`
+- Modify: `src/harness_engineering_installer/payload/.harness/schemas/project-entrypoints.schema.json`
+- Modify: `src/harness_engineering_installer/payload/.harness/templates/project-entrypoints.template.json`
+- Modify: `src/harness_engineering_installer/payload/.harness/skills/project-init/SKILL.md`
+- Modify: `src/harness_engineering_installer/payload/.harness/ARCHITECTURE.md`
+- Modify: `src/harness_engineering_installer/payload/.harness/rules/archive-rules.md`
+- Modify: `src/harness_engineering_installer/payload/.harness/scripts/archive-plan.py`
+- Modify: `src/harness_engineering_installer/payload/.harness/tests/test_init_project_entrypoint.py`
+- Modify: `src/harness_engineering_installer/payload/.harness/tests/test_project_entrypoints_schema.py`
+- Modify: `src/harness_engineering_installer/payload/.harness/tests/test_project_init_skill.py`
+- Modify: `src/harness_engineering_installer/payload/.harness/tests/test_archive_plan.py`
+- Test: `.harness/tests/test_init_project_entrypoint.py`
+- Test: `.harness/tests/test_project_entrypoints_schema.py`
+- Test: `.harness/tests/test_project_init_skill.py`
+- Test: `installer/tests/test_asset_manifest.py`
+- Test: `installer/tests/test_installer_engine.py`
+
+Depends on: []
+
+Acceptance:
+- Managed block version changes from `harness-entrypoint-block-v1` to `harness-entrypoint-block-v2` across the template, script constant, schema, template contract, tests, and installer payload.
+- Running `init-project-entrypoint.py --write` replaces an existing v1 managed block with the full v2 block while preserving user prose outside the markers.
+- The v2 block maps terminal new workflow start to `start-workflow.py`, backlog intake to `backlog-intake.py`, and backlog consumption to `backlog-consume.py`.
+- Entry point updates do not re-run or overwrite `.harness/contracts/project-contracts.json`.
+- Installer payload fixed assets match the source `.harness` assets.
+
+Verification:
+- Run: `python3 .harness/tests/test_init_project_entrypoint.py`
+- Run: `python3 .harness/tests/test_project_entrypoints_schema.py`
+- Run: `python3 .harness/tests/test_project_init_skill.py`
+- Run: `python3 installer/tests/test_asset_manifest.py`
+- Run: `python3 installer/tests/test_installer_engine.py`
+- Check: `cmp -s .harness/templates/entrypoint-managed-block.template.md src/harness_engineering_installer/payload/.harness/templates/entrypoint-managed-block.template.md`.
+
+<a id="task-002-normalize-framework-contract-prose"></a>
+
+### TASK-002: Normalize framework contract prose
 
 Goal: Translate and standardize static Harness framework documentation, rules, skills, templates, and schema prose to English.
 
@@ -89,7 +142,7 @@ Files:
 - Test: `.harness/tests/test_tasks_schema.py`
 - Test: `.harness/tests/test_workflow_state_schema.py`
 
-Depends on: []
+Depends on: [TASK-001]
 
 Acceptance:
 - Static `.harness` framework prose is English across architecture, rules, skills, templates, and schemas.
@@ -102,9 +155,9 @@ Verification:
 - Run: `python3 .harness/tests/test_workflow_state_schema.py`
 - Check: `rg -n "\p{Han}" .harness/ARCHITECTURE.md .harness/rules .harness/skills .harness/templates .harness/schemas` reports no remaining human-facing Chinese prose.
 
-<a id="task-002-normalize-script-diagnostics"></a>
+<a id="task-003-normalize-script-diagnostics"></a>
 
-### TASK-002: Normalize script diagnostics
+### TASK-003: Normalize script diagnostics
 
 Goal: Translate and standardize `.harness/scripts` comments, docstrings, CLI help, errors, warnings, and emitted user-facing messages to English.
 
@@ -116,7 +169,7 @@ Files:
 - Test: `.harness/tests/test_state_write.py`
 - Test: `.harness/tests/test_harness_cli.py`
 
-Depends on: [TASK-001]
+Depends on: [TASK-001, TASK-002]
 
 Acceptance:
 - Script comments and docstrings are English.
@@ -131,9 +184,9 @@ Verification:
 - Run: `python3 .harness/tests/test_harness_cli.py`
 - Check: `rg -n "\p{Han}" .harness/scripts` reports no remaining human-facing Chinese script text.
 
-<a id="task-003-add-language-regression-guard"></a>
+<a id="task-004-add-language-regression-guard"></a>
 
-### TASK-003: Add language regression guard
+### TASK-004: Add language regression guard
 
 Goal: Add a regression test and final validation pass that keeps `.harness` human-facing assets standardized in English.
 
@@ -145,7 +198,7 @@ Files:
 - Test: `.harness/tests/test_lifecycle_transaction.py`
 - Test: `.harness/tests/test_backlog_consume.py`
 
-Depends on: [TASK-001, TASK-002]
+Depends on: [TASK-001, TASK-002, TASK-003]
 
 Acceptance:
 - A dedicated language-standardization test fails on accidental Chinese human-facing text under `.harness`.
