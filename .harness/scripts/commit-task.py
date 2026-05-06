@@ -143,31 +143,30 @@ def default_message(task: dict) -> str:
     return f"完成 {task.get('taskId')}"
 
 
-def ensure_git_root(root: Path) -> None:
+def git_root_for(root: Path) -> Path:
     top_level = run_checked("git rev-parse", ["git", "rev-parse", "--show-toplevel"], root)
-    if Path(top_level).resolve() != root.resolve():
-        raise CommitTaskError(f"--root 必须是 Git 顶层目录: {root}")
-
-
-def normalize_root(root: Path) -> Path:
-    top_level = run_checked("git rev-parse", ["git", "rev-parse", "--show-toplevel"], root)
-    return Path(top_level).resolve()
+    git_root = Path(top_level).resolve()
+    try:
+        root.resolve().relative_to(git_root)
+    except ValueError as exc:
+        raise CommitTaskError(f"--root 不在 Git 工作区内: {root}") from exc
+    return git_root
 
 
 def git_commit(root: Path, task: dict, message: str) -> dict:
-    ensure_git_root(root)
-    status = run_checked("git status", ["git", "status", "--porcelain"], root)
+    git_root = git_root_for(root)
+    status = run_checked("git status", ["git", "status", "--porcelain"], git_root)
     if not status:
         raise CommitTaskError("没有可提交的变更")
 
-    run_checked("git add", ["git", "add", "-A"], root)
-    staged = run_checked("git diff --cached", ["git", "diff", "--cached", "--name-only"], root)
+    run_checked("git add", ["git", "add", "-A"], git_root)
+    staged = run_checked("git diff --cached", ["git", "diff", "--cached", "--name-only"], git_root)
     if not staged:
         raise CommitTaskError("没有可提交的 staged 变更")
     paths = sorted(line for line in staged.splitlines() if line)
 
-    run_checked("git commit", ["git", "commit", "-m", message], root)
-    commit = run_checked("git rev-parse", ["git", "rev-parse", "--short", "HEAD"], root)
+    run_checked("git commit", ["git", "commit", "-m", message], git_root)
+    commit = run_checked("git rev-parse", ["git", "rev-parse", "--short", "HEAD"], git_root)
     return {
         "action": "commit-task",
         "taskId": task.get("taskId"),
@@ -178,7 +177,7 @@ def git_commit(root: Path, task: dict, message: str) -> dict:
 
 
 def run(root: Path, task_id: str, message: str | None) -> dict:
-    root = normalize_root(root)
+    root = git_root_for(root)
     state = load_json(state_path(root))
     if not isinstance(state, dict):
         raise CommitTaskError("workflow-state.json 顶层必须是对象")
